@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.env
+
+# Raw sources are downloaded by hand; processed data and indexes are rebuilt from them.
+data/raw/
+data/processed/
+data/chroma/

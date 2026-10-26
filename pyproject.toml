@@ -1,0 +1,35 @@
+[project]
+name = "compliance-rag"
+version = "0.1.0"
+description = "Self-correcting RAG over regulatory documents, with hybrid retrieval, reranking and Bayesian answer confidence."
+readme = "README.md"
+# Capped at 3.12: torch (via sentence-transformers) and pyspark lag behind new Python releases.
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "beautifulsoup4>=4.15.0",
+    "chromadb>=1.5.9",
+    "langchain>=1.4.7",
+    "langchain-chroma>=1.1.0",
+    "langchain-openai>=1.7.2",
+    "pyarrow>=26.0.0",
+    "pydantic>=2.14.1",
+    "python-dotenv>=1.2.4",
+    "rank-bm25>=0.2.2",
+    "requests>=2.34.2",
+    "scipy>=1.18.1",
+    "sentence-transformers>=6.2.0",
+    "streamlit>=1.66.1",
+]
+
+[project.scripts]
+ingest = "compliance_rag.ingest:main"
+
+[build-system]
+requires = ["uv_build>=0.13.5,<0.14.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "ruff>=0.17.2",
+]
