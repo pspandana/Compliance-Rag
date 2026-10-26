@@ -44,6 +44,23 @@ Add `--show-misses` to list the questions each retriever ranks wrong.
 | hybrid (RRF) | 0.37 | 0.69 | 0.77 | 0.81 | 0.577 |
 | hybrid + rerank (ms-marco-MiniLM-L-6-v2) | 0.47 | 0.80 | 0.84 | 0.86 | 0.670 |
 
+## Answering questions
+
+Needs `.env` (copy `.env.example`, add `OPENAI_API_KEY`). Default model: `gpt-5.4-mini`.
+
+```powershell
+uv run ask "Can I ask a company to delete my data?"
+uv run ask --golden 50     # answer the golden set; writes data/eval/answers.json
+```
+
+Pipeline: hybrid + rerank retrieval (top 5) → generator lists claims with chunk
+citations → fact-checker labels each claim → Beta(1 + supported, 1 + unsupported)
+posterior mean and 90% credible interval → one retry with top 10 and the checker's
+feedback if any claim fails.
+
+On the golden set: 86% of answers cite the labelled article, 100% of 205 claims
+are supported, mean confidence 0.82, and 4 questions needed a retry.
+
 ## Tests
 
 ```powershell

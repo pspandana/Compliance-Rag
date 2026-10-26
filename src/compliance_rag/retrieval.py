@@ -110,3 +110,25 @@ class RerankRetriever:
         scores = self.model.predict([(query, passage_text(c)) for c in candidates])
         top = np.argsort(-scores)[:k]
         return [(candidates[i], float(scores[i])) for i in top]
+
+
+RETRIEVERS = ("dense", "bm25", "hybrid", "rerank")
+
+
+def build_retrievers(names: list[str]) -> dict:
+    """Build the named retrievers, sharing the models between them."""
+    chunks = load_chunks()
+    needed = set(names)
+    if needed & {"hybrid", "rerank"}:
+        needed |= {"dense", "bm25"}
+
+    built = {}
+    if "dense" in needed:
+        built["dense"] = DenseRetriever(chunks)
+    if "bm25" in needed:
+        built["bm25"] = BM25Retriever(chunks)
+    if needed & {"hybrid", "rerank"}:
+        built["hybrid"] = HybridRetriever([built["dense"], built["bm25"]])
+    if "rerank" in needed:
+        built["rerank"] = RerankRetriever(built["hybrid"])
+    return {name: built[name] for name in names}

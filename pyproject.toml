@@ -24,6 +24,7 @@ dependencies = [
 [project.scripts]
 ingest = "compliance_rag.ingest:main"
 evaluate = "compliance_rag.evaluate:main"
+ask = "compliance_rag.answer:main"
 
 [build-system]
 requires = ["uv_build>=0.13.5,<0.14.0"]

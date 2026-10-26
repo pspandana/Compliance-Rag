@@ -37,8 +37,8 @@ make things up.
 | 1 | Get the GDPR text and cut it into pieces | ✅ Done |
 | 2 | Write 50 test questions and build a basic search, then score it | ✅ Done |
 | 3 | Make the search smarter (keyword search, combining, reranking) | ✅ Done |
-| 4 | Add the AI that writes answers and the AI that checks them | Next |
-| 5 | Run tests automatically on GitHub whenever code changes | Later |
+| 4 | Add the AI that writes answers and the AI that checks them | ✅ Done |
+| 5 | Run tests automatically on GitHub whenever code changes | Next |
 | 6 | Optional extras (bigger data tools, Azure cloud) | Optional |
 
 ---
@@ -74,8 +74,11 @@ in later phases.
 compliance-rag/
 ├── src/compliance_rag/     ← the actual code
 │   ├── ingest.py           ← Phase 1: reads the GDPR and cuts it into pieces
-│   ├── retrieval.py        ← Phase 2: the search
-│   └── evaluate.py         ← Phase 2: scores the search
+│   ├── retrieval.py        ← Phases 2-3: the search methods
+│   ├── evaluate.py         ← Phases 2-3: scores the search
+│   ├── llm.py              ← Phase 4: connects to OpenAI
+│   ├── answer.py           ← Phase 4: writes, checks and retries answers
+│   └── confidence.py       ← Phase 4: the Bayesian confidence score
 ├── tests/                  ← small checks that the code works
 ├── eval/
 │   └── gdpr_golden.jsonl   ← the 50 test questions with correct answers
@@ -109,10 +112,14 @@ Python packages just for this project) and installs everything into it.
 .venv\Scripts\Activate.ps1
 ```
 
-**What about the `.env` file?** It will hold your OpenAI API key. Nothing uses it
-until Phase 4, so you can skip it for now. When the time comes, copy
-`.env.example` to `.env` and paste your key in. `.env` is never saved to Git, so
-your key stays private.
+**What about the `.env` file?** It holds your OpenAI API key and is needed from
+Phase 4. **Copy** `.env.example` to `.env` (keep the original; it's the template
+for anyone else using the project) and paste your key after `OPENAI_API_KEY=`.
+`.env` is never saved to Git, so your key stays private.
+
+> **What happened here:** the template was renamed to `.env` rather than copied.
+> We restored `.env.example` from Git. No harm done, and the key was never
+> saved in Git.
 
 ---
 
@@ -436,19 +443,180 @@ The first run downloads the reranker model (about 90 MB).
 
 ---
 
-## 9. Phase 4 (next): Writing and checking answers
+## 9. Phase 4: Writing, checking and scoring answers
 
-1. **Generator:** an AI (OpenAI, which needs the `.env` key) reads the top chunks
-   and writes an answer, citing the articles it used.
-2. **Fact-checker:** a second AI checks each claim in the answer against the
-   chunks: supported or not?
-3. **Bayesian confidence:** we turn the fact-check results into a confidence
-   score with a range, using a Beta distribution. If confidence is low, the
-   system retries with more text or says it isn't sure.
+Now the system actually **answers** questions. Try it:
+
+```powershell
+uv run ask "Can I ask a company to delete my data?"
+```
+
+### Which AI model, and why
+
+- **Model:** `gpt-5.4-mini` from OpenAI (paid, needs the API key in `.env`).
+- **Why:** it's recent, fast and cheap, and writing short answers from given text
+  doesn't need the biggest model. All 50 test questions cost well under $1.
+- **Changing it:** put a different name in `.env`, e.g. `OPENAI_MODEL=gpt-5.5`.
+  The code is in `llm.py`, which can also switch to Azure OpenAI with
+  `LLM_PROVIDER=azure`.
+
+### What happens when you ask a question (5 steps)
+
+**Step 1: Search.** The best search from Phase 3 (combined + reranker) finds the
+top **5** chunks of the GDPR.
+
+**Step 2: Write the answer (the "generator").** The AI gets the question and the 5
+chunks, each labelled with its ID (like `gdpr-art17-c0`). Its instructions:
+
+- answer in plain English, using **only** these chunks (no outside knowledge),
+- then list **every fact** in the answer as a separate **claim**,
+- next to each claim, say which chunk it came from (a **citation**).
+
+We ask for this in a fixed format (called **structured output**), so the program
+can read the claims one by one instead of guessing from free text.
+
+**Step 3: Fact-check (the "checker").** A second AI call reads the same chunks and
+each claim, and decides for every claim: **supported** or **unsupported**, with a
+one-sentence reason. Its instructions are strict: anything added, exaggerated or
+not in the cited chunk counts as unsupported.
+
+The program also applies one rule itself: a claim that cites **nothing**, or
+cites a chunk the AI was never shown (a made-up citation), is automatically
+unsupported.
+
+**Step 4: Confidence score (the Bayesian part).** See the next section.
+
+**Step 5: Self-correction.** If **any** claim was unsupported, the system tries
+again **once**:
+
+- with **more** text (top 10 chunks instead of 5),
+- and with the checker's feedback ("these claims were rejected because...").
+
+Then it keeps whichever attempt has the higher confidence.
+
+### The Bayesian confidence score, explained
+
+We want a number that says "how much should I trust this answer?"
+
+**The simple way (and its problem):** count supported claims. "3 of 3 supported"
+= 100%. "1 of 1 supported" = also 100%. But one check is much weaker evidence
+than three. A simple percentage can't tell them apart.
+
+**The Bayesian way:** think of each claim as a coin toss that lands "supported"
+with some unknown probability. We start with **no opinion**: every probability
+from 0% to 100% is equally likely (this starting belief is called the **prior**).
+Each fact-check result is evidence that updates that belief. The updated belief
+is called the **posterior**.
+
+The math for this kind of yes/no evidence is a **Beta distribution**, and the
+update is just counting:
+
+```
+start:  Beta(1, 1)                              ← no opinion
+after:  Beta(1 + supported, 1 + unsupported)
+confidence = (1 + supported) / (2 + supported + unsupported)
+```
+
+| Fact-check result | Confidence | 90% range | Meaning |
+|---|---|---|---|
+| 1 of 1 supported | 0.67 | 0.22 – 0.97 | Looks good, but very little evidence |
+| 3 of 3 supported | 0.80 | 0.47 – 0.99 | Good |
+| 8 of 8 supported | 0.90 | 0.72 – 0.99 | Strong, and we're sure about it |
+| 1 of 4 supported | 0.33 | 0.08 – 0.66 | Don't trust this answer |
+
+The **90% range** (called a **credible interval**) shows how sure we are about the
+score itself. Few checks give a wide range; many agreeing checks give a narrow one.
+
+We also give a simple label: **high** (0.8 or more), **medium** (0.6 to 0.8),
+**low** (under 0.6), or **none** (no claims at all, e.g. the text didn't contain
+the answer).
+
+The math uses the `scipy` package, and the code is in `confidence.py`.
+
+### Example output
+
+```
+Answer: Yes. Under the GDPR, you can ask the controller to erase your personal
+data without undue delay in certain situations, such as when the data is no
+longer needed, you withdraw consent, ...
+
+Claims:
+  [supported]   Under the GDPR, a data subject can ask the controller to erase
+                personal data without undue delay in certain situations.  ['gdpr-art17-c0']
+  [supported]   One situation is when the personal data is no longer necessary ...
+  ...
+
+Confidence: high - 0.89 (90% range 0.69-0.99), 7 of 7 claims supported
+Sources: Article 17 - Right to erasure ('right to be forgotten'); Recital 66
+Attempts: 1
+```
+
+### Testing it on all 50 questions
+
+```powershell
+uv run ask --golden 50
+```
+
+This answers every test question and checks whether the answer **cites the
+correct article** from our answer key. Details are saved to `data/eval/answers.json`.
+
+| Measure | Result |
+|---|---|
+| Answer cites the correct article | **86%** (43 of 50) |
+| Claims supported by the cited text | **100%** (all 205 claims, after retries) |
+| Average confidence | 0.82 |
+| Questions that needed a retry | 4 |
+
+### What this tells us (important!)
+
+**1. The answers stick to the text.** After self-correction, every claim was
+backed by the passage it cited. The AI isn't making things up.
+
+**2. But "supported" doesn't mean "complete" or "best".** The checker only asks
+"does the cited text say this?" It does **not** ask "was this the right text to
+look at?" When the search misses the key article, the AI writes a faithful answer
+from the wrong or weaker passages, and still gets a high score. Examples:
+
+- **q44** ("Do they have to tell others about my correction?"): the search missed
+  Article 19, so the answer used Articles 16 and 17 instead. Confidence 0.86.
+- **q04** ("What legal grounds allow processing?"): the search missed Article 6, the
+  main answer, so the answer was built from side passages.
+
+So **confidence measures faithfulness, not correctness**. The search is still the
+weakest link; when it fails, everything after it is limited.
+
+**3. The low scores were the right ones to doubt.** The lowest confidence (0.60)
+was **q43**, which cited the wrong article (it confused codes of conduct with
+binding corporate rules). The two 0.67 scores (q49, q50) were correct answers
+with only one claim each, so the system honestly said "little evidence".
+
+**4. Some misses are softer than they look.** For **q29** (family photos), the
+answer cited Recital 18, which explains exactly that exemption. It's a good
+source, just not the article in our answer key.
+
+**5. The same model checks its own work.** Using one AI to both write and check
+is cheaper, but it can share the same blind spots. A different (or bigger) model
+as the checker would be a stronger test.
+
+### Ideas to improve later
+
+- Better search (Phase 3 ideas): a bigger reranker, more chunks, boosting articles.
+- A **completeness check**: ask "does this fully answer the question?" and count
+  that in the confidence score too.
+- Use a **different model** for the fact-checker.
+- Add **more test questions** so the numbers are more reliable.
 
 ---
 
-## 10. Saving our work with Git
+## 10. Phase 5 (next): Automatic checks on GitHub
+
+Every time code is pushed to GitHub, GitHub Actions will automatically run the
+tests and the search evaluation (no API key needed for those). This catches
+mistakes before they pile up. It needs the project on GitHub first.
+
+---
+
+## 11. Saving our work with Git
 
 Git keeps **save points** (called **commits**) of the project.
 
@@ -466,6 +634,7 @@ Save points so far:
 2. `Phase 2: golden set and dense-retrieval baseline`
 3. `Add beginner-friendly project guide`
 4. `Phase 3: BM25, hybrid RRF and cross-encoder reranking`
+5. `Phase 4: generator, fact-checker, Beta confidence and self-correction`
 
 Useful commands:
 
@@ -476,7 +645,7 @@ git status            # see what changed since the last save point
 
 ---
 
-## 11. Glossary
+## 12. Glossary
 
 | Term | Meaning |
 |---|---|
@@ -495,6 +664,15 @@ git status            # see what changed since the last save point
 | **RRF (Reciprocal Rank Fusion)** | Merging ranked lists using positions, not scores |
 | **Shortlist** | The top results from fast search, handed to the slower reranker |
 | **Beta distribution** | The math used for the Bayesian confidence score (Phase 4) |
+| **Generator** | The AI step that writes the answer |
+| **Fact-checker** | The AI step that checks each claim against the text |
+| **Claim** | One single fact stated in an answer |
+| **Citation** | The chunk ID a claim says it came from |
+| **Structured output** | Asking the AI to reply in a fixed format the program can read |
+| **Prior / posterior** | The belief before / after seeing the evidence |
+| **Credible interval** | The range the true confidence probably lies in (we use 90%) |
+| **Self-correction** | Retrying with more text and feedback when a claim fails the check |
+| **Faithfulness** | Whether an answer sticks to its sources (not the same as being complete) |
 | **Golden set** | Questions with known correct answers, used to grade the system |
 | **Baseline** | The first simple version, which later versions must beat |
 | **Recall@k** | Share of questions where the right answer is in the top k results |

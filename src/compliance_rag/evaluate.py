@@ -9,18 +9,11 @@ import json
 from pathlib import Path
 
 from compliance_rag.ingest import PROJECT_ROOT
-from compliance_rag.retrieval import (
-    BM25Retriever,
-    DenseRetriever,
-    HybridRetriever,
-    RerankRetriever,
-    load_chunks,
-)
+from compliance_rag.retrieval import RETRIEVERS, build_retrievers
 
 GOLDEN_PATH = PROJECT_ROOT / "eval" / "gdpr_golden.jsonl"
 RESULTS_DIR = PROJECT_ROOT / "data" / "eval"
 KS = (1, 3, 5, 10)
-RETRIEVERS = ("dense", "bm25", "hybrid", "rerank")
 
 
 def load_golden(path: Path = GOLDEN_PATH) -> list[dict]:
@@ -40,24 +33,6 @@ def reciprocal_rank(ranked: list[str], relevant: list[str]) -> float:
         if doc_id in relevant:
             return 1 / i
     return 0.0
-
-
-def build_retrievers(names: list[str]) -> dict:
-    chunks = load_chunks()
-    needed = set(names)
-    if needed & {"hybrid", "rerank"}:
-        needed |= {"dense", "bm25"}
-
-    built = {}
-    if "dense" in needed:
-        built["dense"] = DenseRetriever(chunks)
-    if "bm25" in needed:
-        built["bm25"] = BM25Retriever(chunks)
-    if needed & {"hybrid", "rerank"}:
-        built["hybrid"] = HybridRetriever([built["dense"], built["bm25"]])
-    if "rerank" in needed:
-        built["rerank"] = RerankRetriever(built["hybrid"])
-    return {name: built[name] for name in names}
 
 
 def score(retriever, golden: list[dict], top_chunks: int) -> list[dict]:
