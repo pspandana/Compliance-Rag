@@ -1,0 +1,50 @@
+{"id": "q01", "question": "Can I ask a company to delete all the personal data it holds about me?", "relevant": ["gdpr-art17"]}
+{"id": "q02", "question": "How long does a company have to tell the regulator about a data breach?", "relevant": ["gdpr-art33"]}
+{"id": "q03", "question": "When does a company have to tell affected people that their data was leaked?", "relevant": ["gdpr-art34"]}
+{"id": "q04", "question": "What legal grounds allow an organisation to process personal data?", "relevant": ["gdpr-art6"]}
+{"id": "q05", "question": "Can I take back my consent after I have given it, and what makes consent valid?", "relevant": ["gdpr-art7"]}
+{"id": "q06", "question": "At what age can a child sign up to an online service without a parent's permission?", "relevant": ["gdpr-art8"]}
+{"id": "q07", "question": "Is a company allowed to process health or genetic data?", "relevant": ["gdpr-art9"]}
+{"id": "q08", "question": "Who may process data about someone's criminal convictions?", "relevant": ["gdpr-art10"]}
+{"id": "q09", "question": "What must a company tell me when it collects data directly from me?", "relevant": ["gdpr-art13"]}
+{"id": "q10", "question": "What information must be given to people when their data was obtained from someone else?", "relevant": ["gdpr-art14"]}
+{"id": "q11", "question": "How can I get a copy of the personal data a company has about me?", "relevant": ["gdpr-art15"]}
+{"id": "q12", "question": "A company has wrong information about me. Can I make them fix it?", "relevant": ["gdpr-art16"]}
+{"id": "q13", "question": "Can I ask a company to stop using my data while I dispute its accuracy?", "relevant": ["gdpr-art18"]}
+{"id": "q14", "question": "Can I move my data from one service provider to another?", "relevant": ["gdpr-art20"]}
+{"id": "q15", "question": "How do I stop a company from using my data for direct marketing?", "relevant": ["gdpr-art21"]}
+{"id": "q16", "question": "Can a bank reject my loan application using only an automated algorithm?", "relevant": ["gdpr-art22"]}
+{"id": "q17", "question": "How long does a company have to respond to my data request?", "relevant": ["gdpr-art12"]}
+{"id": "q18", "question": "Can a company charge me a fee for giving me access to my data?", "relevant": ["gdpr-art12", "gdpr-art15"]}
+{"id": "q19", "question": "When does an organisation have to appoint a data protection officer?", "relevant": ["gdpr-art37"]}
+{"id": "q20", "question": "What is a data protection officer responsible for?", "relevant": ["gdpr-art39"]}
+{"id": "q21", "question": "Can a data protection officer be dismissed for doing their job?", "relevant": ["gdpr-art38"]}
+{"id": "q22", "question": "When is a data protection impact assessment required?", "relevant": ["gdpr-art35"]}
+{"id": "q23", "question": "When must a controller consult the supervisory authority before starting high-risk processing?", "relevant": ["gdpr-art36"]}
+{"id": "q24", "question": "Does a small business with fewer than 250 employees have to keep records of its processing activities?", "relevant": ["gdpr-art30"]}
+{"id": "q25", "question": "What must a contract with a data processor include?", "relevant": ["gdpr-art28"]}
+{"id": "q26", "question": "Two companies decide together how data is used. Who is responsible?", "relevant": ["gdpr-art26"]}
+{"id": "q27", "question": "Does a company outside the EU need a representative in the Union?", "relevant": ["gdpr-art27"]}
+{"id": "q28", "question": "Does the GDPR apply to a US company selling products to people in the EU?", "relevant": ["gdpr-art3"]}
+{"id": "q29", "question": "Does the GDPR apply to personal photos I keep for my family?", "relevant": ["gdpr-art2"]}
+{"id": "q30", "question": "What counts as personal data?", "relevant": ["gdpr-art4"]}
+{"id": "q31", "question": "Can a company keep my data forever or collect more than it needs?", "relevant": ["gdpr-art5"]}
+{"id": "q32", "question": "What does data protection by design and by default mean?", "relevant": ["gdpr-art25"]}
+{"id": "q33", "question": "What security measures, such as encryption, must be used to protect personal data?", "relevant": ["gdpr-art32"]}
+{"id": "q34", "question": "Can data be sent to a country the Commission has found to have adequate protection?", "relevant": ["gdpr-art45"]}
+{"id": "q35", "question": "Can standard contractual clauses be used to transfer data outside the EU?", "relevant": ["gdpr-art46"]}
+{"id": "q36", "question": "How can a multinational group transfer data between its own companies in different countries?", "relevant": ["gdpr-art47"]}
+{"id": "q37", "question": "Can data be transferred to a third country without safeguards if the person explicitly consents?", "relevant": ["gdpr-art49"]}
+{"id": "q38", "question": "What is the maximum fine for breaking the GDPR?", "relevant": ["gdpr-art83"]}
+{"id": "q39", "question": "Can I get compensation if I suffered damage because my data was misused?", "relevant": ["gdpr-art82"]}
+{"id": "q40", "question": "Where can I file a complaint about how my data was handled?", "relevant": ["gdpr-art77"]}
+{"id": "q41", "question": "Which regulator is in charge when a company processes data in several EU countries?", "relevant": ["gdpr-art56"]}
+{"id": "q42", "question": "Are IP addresses and cookie identifiers considered personal data?", "relevant": ["gdpr-art4", "gdpr-rct30"]}
+{"id": "q43", "question": "Can industry associations create their own rules for complying with the GDPR?", "relevant": ["gdpr-art40"]}
+{"id": "q44", "question": "If I get my data corrected or deleted, does the company have to tell others it shared it with?", "relevant": ["gdpr-art19"]}
+{"id": "q45", "question": "What safeguards apply when personal data is used for scientific research or statistics?", "relevant": ["gdpr-art89"]}
+{"id": "q46", "question": "Can EU countries make special rules for processing employee data?", "relevant": ["gdpr-art88"]}
+{"id": "q47", "question": "How does the GDPR deal with journalism and freedom of expression?", "relevant": ["gdpr-art85"]}
+{"id": "q48", "question": "Can a company use my data for a different purpose than the one it was collected for?", "relevant": ["gdpr-art6", "gdpr-art5"]}
+{"id": "q49", "question": "From what date did the GDPR start to apply?", "relevant": ["gdpr-art99"]}
+{"id": "q50", "question": "Is fraud prevention a legitimate interest for processing personal data?", "relevant": ["gdpr-rct47", "gdpr-art6"]}

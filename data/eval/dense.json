@@ -1,0 +1,1206 @@
+[
+  {
+    "id": "q01",
+    "question": "Can I ask a company to delete all the personal data it holds about me?",
+    "relevant": [
+      "gdpr-art17"
+    ],
+    "ranked": [
+      "gdpr-art17",
+      "gdpr-rct65",
+      "gdpr-rct39",
+      "gdpr-rct66",
+      "gdpr-art19",
+      "gdpr-art13",
+      "gdpr-rct48",
+      "gdpr-rct31",
+      "gdpr-rct28",
+      "gdpr-rct61"
+    ],
+    "rr": 1.0,
+    "recall@1": 1.0,
+    "recall@3": 1.0,
+    "recall@5": 1.0,
+    "recall@10": 1.0
+  },
+  {
+    "id": "q02",
+    "question": "How long does a company have to tell the regulator about a data breach?",
+    "relevant": [
+      "gdpr-art33"
+    ],
+    "ranked": [
+      "gdpr-art33",
+      "gdpr-rct87",
+      "gdpr-rct85",
+      "gdpr-art34",
+      "gdpr-art12",
+      "gdpr-art38",
+      "gdpr-rct86",
+      "gdpr-art39",
+      "gdpr-rct137",
+      "gdpr-art36"
+    ],
+    "rr": 1.0,
+    "recall@1": 1.0,
+    "recall@3": 1.0,
+    "recall@5": 1.0,
+    "recall@10": 1.0
+  },
+  {
+    "id": "q03",
+    "question": "When does a company have to tell affected people that their data was leaked?",
+    "relevant": [
+      "gdpr-art34"
+    ],
+    "ranked": [
+      "gdpr-rct85",
+      "gdpr-rct87",
+      "gdpr-art34",
+      "gdpr-art33",
+      "gdpr-art14",
+      "gdpr-art13",
+      "gdpr-rct88",
+      "gdpr-rct86",
+      "gdpr-rct61",
+      "gdpr-rct65"
+    ],
+    "rr": 0.3333333333333333,
+    "recall@1": 0.0,
+    "recall@3": 1.0,
+    "recall@5": 1.0,
+    "recall@10": 1.0
+  },
+  {
+    "id": "q04",
+    "question": "What legal grounds allow an organisation to process personal data?",
+    "relevant": [
+      "gdpr-art6"
+    ],
+    "ranked": [
+      "gdpr-rct40",
+      "gdpr-rct19",
+      "gdpr-art10",
+      "gdpr-rct20",
+      "gdpr-rct22",
+      "gdpr-rct50",
+      "gdpr-art5",
+      "gdpr-art9",
+      "gdpr-rct10",
+      "gdpr-art13"
+    ],
+    "rr": 0.06666666666666667,
+    "recall@1": 0.0,
+    "recall@3": 0.0,
+    "recall@5": 0.0,
+    "recall@10": 0.0
+  },
+  {
+    "id": "q05",
+    "question": "Can I take back my consent after I have given it, and what makes consent valid?",
+    "relevant": [
+      "gdpr-art7"
+    ],
+    "ranked": [
+      "gdpr-art7",
+      "gdpr-rct43",
+      "gdpr-rct32",
+      "gdpr-rct171",
+      "gdpr-rct65",
+      "gdpr-rct33",
+      "gdpr-art17",
+      "gdpr-rct42",
+      "gdpr-art16",
+      "gdpr-rct111"
+    ],
+    "rr": 1.0,
+    "recall@1": 1.0,
+    "recall@3": 1.0,
+    "recall@5": 1.0,
+    "recall@10": 1.0
+  },
+  {
+    "id": "q06",
+    "question": "At what age can a child sign up to an online service without a parent's permission?",
+    "relevant": [
+      "gdpr-art8"
+    ],
+    "ranked": [
+      "gdpr-art8",
+      "gdpr-rct38",
+      "gdpr-rct58",
+      "gdpr-art12",
+      "gdpr-rct64",
+      "gdpr-rct43",
+      "gdpr-rct71",
+      "gdpr-art6",
+      "gdpr-art25",
+      "gdpr-rct142"
+    ],
+    "rr": 1.0,
+    "recall@1": 1.0,
+    "recall@3": 1.0,
+    "recall@5": 1.0,
+    "recall@10": 1.0
+  },
+  {
+    "id": "q07",
+    "question": "Is a company allowed to process health or genetic data?",
+    "relevant": [
+      "gdpr-art9"
+    ],
+    "ranked": [
+      "gdpr-rct53",
+      "gdpr-art9",
+      "gdpr-rct54",
+      "gdpr-rct34",
+      "gdpr-art88",
+      "gdpr-rct40",
+      "gdpr-rct51",
+      "gdpr-rct63",
+      "gdpr-rct156",
+      "gdpr-rct10"
+    ],
+    "rr": 0.5,
+    "recall@1": 0.0,
+    "recall@3": 1.0,
+    "recall@5": 1.0,
+    "recall@10": 1.0
+  },
+  {
+    "id": "q08",
+    "question": "Who may process data about someone's criminal convictions?",
+    "relevant": [
+      "gdpr-art10"
+    ],
+    "ranked": [
+      "gdpr-art10",
+      "gdpr-rct24",
+      "gdpr-rct97",
+      "gdpr-rct71",
+      "gdpr-rct20",
+      "gdpr-rct50",
+      "gdpr-rct19",
+      "gdpr-rct61",
+      "gdpr-rct60",
+      "gdpr-rct69"
+    ],
+    "rr": 1.0,
+    "recall@1": 1.0,
+    "recall@3": 1.0,
+    "recall@5": 1.0,
+    "recall@10": 1.0
+  },
+  {
+    "id": "q09",
+    "question": "What must a company tell me when it collects data directly from me?",
+    "relevant": [
+      "gdpr-art13"
+    ],
+    "ranked": [
+      "gdpr-rct61",
+      "gdpr-art13",
+      "gdpr-rct70",
+      "gdpr-art14",
+      "gdpr-art34",
+      "gdpr-rct31",
+      "gdpr-rct60",
+      "gdpr-rct7",
+      "gdpr-rct87",
+      "gdpr-rct48"
+    ],
+    "rr": 0.5,
+    "recall@1": 0.0,
+    "recall@3": 1.0,
+    "recall@5": 1.0,
+    "recall@10": 1.0
+  },
+  {
+    "id": "q10",
+    "question": "What information must be given to people when their data was obtained from someone else?",
+    "relevant": [
+      "gdpr-art14"
+    ],
+    "ranked": [
+      "gdpr-rct61",
+      "gdpr-art14",
+      "gdpr-art13",
+      "gdpr-rct62",
+      "gdpr-rct26",
+      "gdpr-art15",
+      "gdpr-rct46",
+      "gdpr-rct39",
+      "gdpr-rct63",
+      "gdpr-rct112"
+    ],
+    "rr": 0.5,
+    "recall@1": 0.0,
+    "recall@3": 1.0,
+    "recall@5": 1.0,
+    "recall@10": 1.0
+  },
+  {
+    "id": "q11",
+    "question": "How can I get a copy of the personal data a company has about me?",
+    "relevant": [
+      "gdpr-art15"
+    ],
+    "ranked": [
+      "gdpr-art14",
+      "gdpr-art13",
+      "gdpr-art15",
+      "gdpr-rct61",
+      "gdpr-rct39",
+      "gdpr-rct101",
+      "gdpr-rct29",
+      "gdpr-rct14",
+      "gdpr-art16",
+      "gdpr-rct7"
+    ],
+    "rr": 0.3333333333333333,
+    "recall@1": 0.0,
+    "recall@3": 1.0,
+    "recall@5": 1.0,
+    "recall@10": 1.0
+  },
+  {
+    "id": "q12",
+    "question": "A company has wrong information about me. Can I make them fix it?",
+    "relevant": [
+      "gdpr-art16"
+    ],
+    "ranked": [
+      "gdpr-art16",
+      "gdpr-rct85",
+      "gdpr-rct61",
+      "gdpr-rct142",
+      "gdpr-art14",
+      "gdpr-rct47",
+      "gdpr-art13",
+      "gdpr-rct107",
+      "gdpr-rct71",
+      "gdpr-rct88"
+    ],
+    "rr": 1.0,
+    "recall@1": 1.0,
+    "recall@3": 1.0,
+    "recall@5": 1.0,
+    "recall@10": 1.0
+  },
+  {
+    "id": "q13",
+    "question": "Can I ask a company to stop using my data while I dispute its accuracy?",
+    "relevant": [
+      "gdpr-art18"
+    ],
+    "ranked": [
+      "gdpr-rct141",
+      "gdpr-rct62",
+      "gdpr-rct142",
+      "gdpr-art57",
+      "gdpr-rct137",
+      "gdpr-rct65",
+      "gdpr-rct107",
+      "gdpr-art18",
+      "gdpr-art77",
+      "gdpr-rct71"
+    ],
+    "rr": 0.125,
+    "recall@1": 0.0,
+    "recall@3": 0.0,
+    "recall@5": 0.0,
+    "recall@10": 1.0
+  },
+  {
+    "id": "q14",
+    "question": "Can I move my data from one service provider to another?",
+    "relevant": [
+      "gdpr-art20"
+    ],
+    "ranked": [
+      "gdpr-art44",
+      "gdpr-rct101",
+      "gdpr-art20",
+      "gdpr-rct107",
+      "gdpr-art46",
+      "gdpr-art48",
+      "gdpr-rct68",
+      "gdpr-rct5",
+      "gdpr-art45",
+      "gdpr-art96"
+    ],
+    "rr": 0.3333333333333333,
+    "recall@1": 0.0,
+    "recall@3": 1.0,
+    "recall@5": 1.0,
+    "recall@10": 1.0
+  },
+  {
+    "id": "q15",
+    "question": "How do I stop a company from using my data for direct marketing?",
+    "relevant": [
+      "gdpr-art21"
+    ],
+    "ranked": [
+      "gdpr-rct70",
+      "gdpr-art21",
+      "gdpr-rct107",
+      "gdpr-rct38",
+      "gdpr-art25",
+      "gdpr-rct31",
+      "gdpr-rct71",
+      "gdpr-rct47",
+      "gdpr-art14",
+      "gdpr-art11"
+    ],
+    "rr": 0.5,
+    "recall@1": 0.0,
+    "recall@3": 1.0,
+    "recall@5": 1.0,
+    "recall@10": 1.0
+  },
+  {
+    "id": "q16",
+    "question": "Can a bank reject my loan application using only an automated algorithm?",
+    "relevant": [
+      "gdpr-art22"
+    ],
+    "ranked": [
+      "gdpr-rct67",
+      "gdpr-rct71",
+      "gdpr-rct143",
+      "gdpr-rct131",
+      "gdpr-art22",
+      "gdpr-art61",
+      "gdpr-rct23",
+      "gdpr-rct94",
+      "gdpr-rct47",
+      "gdpr-rct81"
+    ],
+    "rr": 0.2,
+    "recall@1": 0.0,
+    "recall@3": 0.0,
+    "recall@5": 1.0,
+    "recall@10": 1.0
+  },
+  {
+    "id": "q17",
+    "question": "How long does a company have to respond to my data request?",
+    "relevant": [
+      "gdpr-art12"
+    ],
+    "ranked": [
+      "gdpr-art12",
+      "gdpr-rct59",
+      "gdpr-art57",
+      "gdpr-art13",
+      "gdpr-art14",
+      "gdpr-art7",
+      "gdpr-rct137",
+      "gdpr-rct85",
+      "gdpr-rct141",
+      "gdpr-art80"
+    ],
+    "rr": 1.0,
+    "recall@1": 1.0,
+    "recall@3": 1.0,
+    "recall@5": 1.0,
+    "recall@10": 1.0
+  },
+  {
+    "id": "q18",
+    "question": "Can a company charge me a fee for giving me access to my data?",
+    "relevant": [
+      "gdpr-art12",
+      "gdpr-art15"
+    ],
+    "ranked": [
+      "gdpr-art12",
+      "gdpr-art15",
+      "gdpr-rct23",
+      "gdpr-art80",
+      "gdpr-art57",
+      "gdpr-rct142",
+      "gdpr-art7",
+      "gdpr-rct59",
+      "gdpr-rct43",
+      "gdpr-rct111"
+    ],
+    "rr": 1.0,
+    "recall@1": 0.5,
+    "recall@3": 1.0,
+    "recall@5": 1.0,
+    "recall@10": 1.0
+  },
+  {
+    "id": "q19",
+    "question": "When does an organisation have to appoint a data protection officer?",
+    "relevant": [
+      "gdpr-art37"
+    ],
+    "ranked": [
+      "gdpr-art38",
+      "gdpr-art37",
+      "gdpr-art39",
+      "gdpr-art75",
+      "gdpr-rct140",
+      "gdpr-art25",
+      "gdpr-art68",
+      "gdpr-rct108",
+      "gdpr-rct139",
+      "gdpr-rct107"
+    ],
+    "rr": 0.5,
+    "recall@1": 0.0,
+    "recall@3": 1.0,
+    "recall@5": 1.0,
+    "recall@10": 1.0
+  },
+  {
+    "id": "q20",
+    "question": "What is a data protection officer responsible for?",
+    "relevant": [
+      "gdpr-art39"
+    ],
+    "ranked": [
+      "gdpr-art38",
+      "gdpr-art37",
+      "gdpr-art39",
+      "gdpr-rct140",
+      "gdpr-rct97",
+      "gdpr-art75",
+      "gdpr-art57",
+      "gdpr-rct108",
+      "gdpr-art25",
+      "gdpr-rct84"
+    ],
+    "rr": 0.3333333333333333,
+    "recall@1": 0.0,
+    "recall@3": 1.0,
+    "recall@5": 1.0,
+    "recall@10": 1.0
+  },
+  {
+    "id": "q21",
+    "question": "Can a data protection officer be dismissed for doing their job?",
+    "relevant": [
+      "gdpr-art38"
+    ],
+    "ranked": [
+      "gdpr-art38",
+      "gdpr-art39",
+      "gdpr-art37",
+      "gdpr-art57",
+      "gdpr-rct97",
+      "gdpr-rct107",
+      "gdpr-rct108",
+      "gdpr-rct140",
+      "gdpr-rct31",
+      "gdpr-rct142"
+    ],
+    "rr": 1.0,
+    "recall@1": 1.0,
+    "recall@3": 1.0,
+    "recall@5": 1.0,
+    "recall@10": 1.0
+  },
+  {
+    "id": "q22",
+    "question": "When is a data protection impact assessment required?",
+    "relevant": [
+      "gdpr-art35"
+    ],
+    "ranked": [
+      "gdpr-art35",
+      "gdpr-rct90",
+      "gdpr-rct84",
+      "gdpr-art36",
+      "gdpr-rct91",
+      "gdpr-rct94",
+      "gdpr-art39",
+      "gdpr-art57",
+      "gdpr-art13",
+      "gdpr-rct83"
+    ],
+    "rr": 1.0,
+    "recall@1": 1.0,
+    "recall@3": 1.0,
+    "recall@5": 1.0,
+    "recall@10": 1.0
+  },
+  {
+    "id": "q23",
+    "question": "When must a controller consult the supervisory authority before starting high-risk processing?",
+    "relevant": [
+      "gdpr-art36"
+    ],
+    "ranked": [
+      "gdpr-art36",
+      "gdpr-rct126",
+      "gdpr-rct94",
+      "gdpr-rct127",
+      "gdpr-art24",
+      "gdpr-art60",
+      "gdpr-rct84",
+      "gdpr-rct95",
+      "gdpr-rct82",
+      "gdpr-rct74"
+    ],
+    "rr": 1.0,
+    "recall@1": 1.0,
+    "recall@3": 1.0,
+    "recall@5": 1.0,
+    "recall@10": 1.0
+  },
+  {
+    "id": "q24",
+    "question": "Does a small business with fewer than 250 employees have to keep records of its processing activities?",
+    "relevant": [
+      "gdpr-art30"
+    ],
+    "ranked": [
+      "gdpr-art30",
+      "gdpr-rct13",
+      "gdpr-rct82",
+      "gdpr-rct22",
+      "gdpr-rct62",
+      "gdpr-art88",
+      "gdpr-rct156",
+      "gdpr-rct81",
+      "gdpr-rct97",
+      "gdpr-rct50"
+    ],
+    "rr": 1.0,
+    "recall@1": 1.0,
+    "recall@3": 1.0,
+    "recall@5": 1.0,
+    "recall@10": 1.0
+  },
+  {
+    "id": "q25",
+    "question": "What must a contract with a data processor include?",
+    "relevant": [
+      "gdpr-art28"
+    ],
+    "ranked": [
+      "gdpr-rct109",
+      "gdpr-art28",
+      "gdpr-rct81",
+      "gdpr-rct95",
+      "gdpr-rct80",
+      "gdpr-art30",
+      "gdpr-rct108",
+      "gdpr-rct23",
+      "gdpr-art6",
+      "gdpr-rct68"
+    ],
+    "rr": 0.5,
+    "recall@1": 0.0,
+    "recall@3": 1.0,
+    "recall@5": 1.0,
+    "recall@10": 1.0
+  },
+  {
+    "id": "q26",
+    "question": "Two companies decide together how data is used. Who is responsible?",
+    "relevant": [
+      "gdpr-art26"
+    ],
+    "ranked": [
+      "gdpr-rct40",
+      "gdpr-rct79",
+      "gdpr-rct74",
+      "gdpr-art13",
+      "gdpr-art26",
+      "gdpr-art47",
+      "gdpr-rct123",
+      "gdpr-art80",
+      "gdpr-rct108",
+      "gdpr-art25"
+    ],
+    "rr": 0.2,
+    "recall@1": 0.0,
+    "recall@3": 0.0,
+    "recall@5": 1.0,
+    "recall@10": 1.0
+  },
+  {
+    "id": "q27",
+    "question": "Does a company outside the EU need a representative in the Union?",
+    "relevant": [
+      "gdpr-art27"
+    ],
+    "ranked": [
+      "gdpr-art27",
+      "gdpr-rct102",
+      "gdpr-art48",
+      "gdpr-art4",
+      "gdpr-rct103",
+      "gdpr-rct115",
+      "gdpr-art68",
+      "gdpr-rct101",
+      "gdpr-rct80",
+      "gdpr-rct23"
+    ],
+    "rr": 1.0,
+    "recall@1": 1.0,
+    "recall@3": 1.0,
+    "recall@5": 1.0,
+    "recall@10": 1.0
+  },
+  {
+    "id": "q28",
+    "question": "Does the GDPR apply to a US company selling products to people in the EU?",
+    "relevant": [
+      "gdpr-art3"
+    ],
+    "ranked": [
+      "gdpr-rct102",
+      "gdpr-rct101",
+      "gdpr-rct115",
+      "gdpr-rct23",
+      "gdpr-rct19",
+      "gdpr-rct10",
+      "gdpr-rct13",
+      "gdpr-rct14",
+      "gdpr-rct5",
+      "gdpr-art48"
+    ],
+    "rr": 0.08333333333333333,
+    "recall@1": 0.0,
+    "recall@3": 0.0,
+    "recall@5": 0.0,
+    "recall@10": 0.0
+  },
+  {
+    "id": "q29",
+    "question": "Does the GDPR apply to personal photos I keep for my family?",
+    "relevant": [
+      "gdpr-art2"
+    ],
+    "ranked": [
+      "gdpr-rct18",
+      "gdpr-rct38",
+      "gdpr-rct51",
+      "gdpr-rct28",
+      "gdpr-rct27",
+      "gdpr-rct14",
+      "gdpr-art25",
+      "gdpr-rct4",
+      "gdpr-rct65",
+      "gdpr-rct160"
+    ],
+    "rr": 0.0,
+    "recall@1": 0.0,
+    "recall@3": 0.0,
+    "recall@5": 0.0,
+    "recall@10": 0.0
+  },
+  {
+    "id": "q30",
+    "question": "What counts as personal data?",
+    "relevant": [
+      "gdpr-art4"
+    ],
+    "ranked": [
+      "gdpr-art4",
+      "gdpr-rct18",
+      "gdpr-rct162",
+      "gdpr-rct24",
+      "gdpr-art13",
+      "gdpr-art5",
+      "gdpr-rct71",
+      "gdpr-rct29",
+      "gdpr-rct64",
+      "gdpr-rct40"
+    ],
+    "rr": 1.0,
+    "recall@1": 1.0,
+    "recall@3": 1.0,
+    "recall@5": 1.0,
+    "recall@10": 1.0
+  },
+  {
+    "id": "q31",
+    "question": "Can a company keep my data forever or collect more than it needs?",
+    "relevant": [
+      "gdpr-art5"
+    ],
+    "ranked": [
+      "gdpr-rct62",
+      "gdpr-rct65",
+      "gdpr-rct137",
+      "gdpr-rct108",
+      "gdpr-art7",
+      "gdpr-rct156",
+      "gdpr-art5",
+      "gdpr-art46",
+      "gdpr-art80",
+      "gdpr-rct7"
+    ],
+    "rr": 0.14285714285714285,
+    "recall@1": 0.0,
+    "recall@3": 0.0,
+    "recall@5": 0.0,
+    "recall@10": 1.0
+  },
+  {
+    "id": "q32",
+    "question": "What does data protection by design and by default mean?",
+    "relevant": [
+      "gdpr-art25"
+    ],
+    "ranked": [
+      "gdpr-art25",
+      "gdpr-rct78",
+      "gdpr-rct38",
+      "gdpr-rct108",
+      "gdpr-art4",
+      "gdpr-rct7",
+      "gdpr-rct26",
+      "gdpr-art13",
+      "gdpr-rct28",
+      "gdpr-rct109"
+    ],
+    "rr": 1.0,
+    "recall@1": 1.0,
+    "recall@3": 1.0,
+    "recall@5": 1.0,
+    "recall@10": 1.0
+  },
+  {
+    "id": "q33",
+    "question": "What security measures, such as encryption, must be used to protect personal data?",
+    "relevant": [
+      "gdpr-art32"
+    ],
+    "ranked": [
+      "gdpr-rct83",
+      "gdpr-rct78",
+      "gdpr-rct88",
+      "gdpr-rct73",
+      "gdpr-art25",
+      "gdpr-rct38",
+      "gdpr-rct49",
+      "gdpr-rct6",
+      "gdpr-rct64",
+      "gdpr-rct11"
+    ],
+    "rr": 0.0,
+    "recall@1": 0.0,
+    "recall@3": 0.0,
+    "recall@5": 0.0,
+    "recall@10": 0.0
+  },
+  {
+    "id": "q34",
+    "question": "Can data be sent to a country the Commission has found to have adequate protection?",
+    "relevant": [
+      "gdpr-art45"
+    ],
+    "ranked": [
+      "gdpr-rct103",
+      "gdpr-rct107",
+      "gdpr-art46",
+      "gdpr-rct108",
+      "gdpr-rct114",
+      "gdpr-rct101",
+      "gdpr-rct104",
+      "gdpr-art45",
+      "gdpr-rct105",
+      "gdpr-rct116"
+    ],
+    "rr": 0.125,
+    "recall@1": 0.0,
+    "recall@3": 0.0,
+    "recall@5": 0.0,
+    "recall@10": 1.0
+  },
+  {
+    "id": "q35",
+    "question": "Can standard contractual clauses be used to transfer data outside the EU?",
+    "relevant": [
+      "gdpr-art46"
+    ],
+    "ranked": [
+      "gdpr-rct102",
+      "gdpr-rct115",
+      "gdpr-rct101",
+      "gdpr-art46",
+      "gdpr-art49",
+      "gdpr-rct108",
+      "gdpr-rct111",
+      "gdpr-rct107",
+      "gdpr-rct109",
+      "gdpr-rct112"
+    ],
+    "rr": 0.25,
+    "recall@1": 0.0,
+    "recall@3": 0.0,
+    "recall@5": 1.0,
+    "recall@10": 1.0
+  },
+  {
+    "id": "q36",
+    "question": "How can a multinational group transfer data between its own companies in different countries?",
+    "relevant": [
+      "gdpr-art47"
+    ],
+    "ranked": [
+      "gdpr-rct101",
+      "gdpr-art44",
+      "gdpr-rct110",
+      "gdpr-rct107",
+      "gdpr-art49",
+      "gdpr-art46",
+      "gdpr-rct116",
+      "gdpr-rct102",
+      "gdpr-rct48",
+      "gdpr-art45"
+    ],
+    "rr": 0.05555555555555555,
+    "recall@1": 0.0,
+    "recall@3": 0.0,
+    "recall@5": 0.0,
+    "recall@10": 0.0
+  },
+  {
+    "id": "q37",
+    "question": "Can data be transferred to a third country without safeguards if the person explicitly consents?",
+    "relevant": [
+      "gdpr-art49"
+    ],
+    "ranked": [
+      "gdpr-art46",
+      "gdpr-rct115",
+      "gdpr-rct107",
+      "gdpr-rct101",
+      "gdpr-rct102",
+      "gdpr-art44",
+      "gdpr-art48",
+      "gdpr-rct103",
+      "gdpr-rct108",
+      "gdpr-art45"
+    ],
+    "rr": 0.09090909090909091,
+    "recall@1": 0.0,
+    "recall@3": 0.0,
+    "recall@5": 0.0,
+    "recall@10": 0.0
+  },
+  {
+    "id": "q38",
+    "question": "What is the maximum fine for breaking the GDPR?",
+    "relevant": [
+      "gdpr-art83"
+    ],
+    "ranked": [
+      "gdpr-art83",
+      "gdpr-rct108",
+      "gdpr-rct137",
+      "gdpr-rct85",
+      "gdpr-art46",
+      "gdpr-rct107",
+      "gdpr-rct148",
+      "gdpr-art7",
+      "gdpr-art47",
+      "gdpr-art57"
+    ],
+    "rr": 1.0,
+    "recall@1": 1.0,
+    "recall@3": 1.0,
+    "recall@5": 1.0,
+    "recall@10": 1.0
+  },
+  {
+    "id": "q39",
+    "question": "Can I get compensation if I suffered damage because my data was misused?",
+    "relevant": [
+      "gdpr-art82"
+    ],
+    "ranked": [
+      "gdpr-rct146",
+      "gdpr-art82",
+      "gdpr-rct142",
+      "gdpr-art16",
+      "gdpr-rct65",
+      "gdpr-art34",
+      "gdpr-rct108",
+      "gdpr-rct83",
+      "gdpr-art13",
+      "gdpr-rct62"
+    ],
+    "rr": 0.5,
+    "recall@1": 0.0,
+    "recall@3": 1.0,
+    "recall@5": 1.0,
+    "recall@10": 1.0
+  },
+  {
+    "id": "q40",
+    "question": "Where can I file a complaint about how my data was handled?",
+    "relevant": [
+      "gdpr-art77"
+    ],
+    "ranked": [
+      "gdpr-rct141",
+      "gdpr-art57",
+      "gdpr-art77",
+      "gdpr-rct131",
+      "gdpr-art13",
+      "gdpr-rct142",
+      "gdpr-art80",
+      "gdpr-art14",
+      "gdpr-rct40",
+      "gdpr-rct124"
+    ],
+    "rr": 0.3333333333333333,
+    "recall@1": 0.0,
+    "recall@3": 1.0,
+    "recall@5": 1.0,
+    "recall@10": 1.0
+  },
+  {
+    "id": "q41",
+    "question": "Which regulator is in charge when a company processes data in several EU countries?",
+    "relevant": [
+      "gdpr-art56"
+    ],
+    "ranked": [
+      "gdpr-rct17",
+      "gdpr-art97",
+      "gdpr-rct140",
+      "gdpr-art3",
+      "gdpr-rct101",
+      "gdpr-rct115",
+      "gdpr-art58",
+      "gdpr-art75",
+      "gdpr-rct107",
+      "gdpr-rct20"
+    ],
+    "rr": 0.0,
+    "recall@1": 0.0,
+    "recall@3": 0.0,
+    "recall@5": 0.0,
+    "recall@10": 0.0
+  },
+  {
+    "id": "q42",
+    "question": "Are IP addresses and cookie identifiers considered personal data?",
+    "relevant": [
+      "gdpr-art4",
+      "gdpr-rct30"
+    ],
+    "ranked": [
+      "gdpr-rct28",
+      "gdpr-rct30",
+      "gdpr-rct64",
+      "gdpr-rct18",
+      "gdpr-rct26",
+      "gdpr-rct51",
+      "gdpr-art4",
+      "gdpr-rct57",
+      "gdpr-rct24",
+      "gdpr-rct38"
+    ],
+    "rr": 0.5,
+    "recall@1": 0.0,
+    "recall@3": 0.5,
+    "recall@5": 0.5,
+    "recall@10": 1.0
+  },
+  {
+    "id": "q43",
+    "question": "Can industry associations create their own rules for complying with the GDPR?",
+    "relevant": [
+      "gdpr-art40"
+    ],
+    "ranked": [
+      "gdpr-art47",
+      "gdpr-rct164",
+      "gdpr-rct7",
+      "gdpr-art40",
+      "gdpr-rct108",
+      "gdpr-rct142",
+      "gdpr-rct78",
+      "gdpr-art4",
+      "gdpr-rct13",
+      "gdpr-rct81"
+    ],
+    "rr": 0.25,
+    "recall@1": 0.0,
+    "recall@3": 0.0,
+    "recall@5": 1.0,
+    "recall@10": 1.0
+  },
+  {
+    "id": "q44",
+    "question": "If I get my data corrected or deleted, does the company have to tell others it shared it with?",
+    "relevant": [
+      "gdpr-art19"
+    ],
+    "ranked": [
+      "gdpr-rct65",
+      "gdpr-art17",
+      "gdpr-rct61",
+      "gdpr-rct66",
+      "gdpr-art16",
+      "gdpr-art19",
+      "gdpr-art14",
+      "gdpr-art13",
+      "gdpr-rct62",
+      "gdpr-rct68"
+    ],
+    "rr": 0.16666666666666666,
+    "recall@1": 0.0,
+    "recall@3": 0.0,
+    "recall@5": 0.0,
+    "recall@10": 1.0
+  },
+  {
+    "id": "q45",
+    "question": "What safeguards apply when personal data is used for scientific research or statistics?",
+    "relevant": [
+      "gdpr-art89"
+    ],
+    "ranked": [
+      "gdpr-rct156",
+      "gdpr-rct159",
+      "gdpr-rct33",
+      "gdpr-rct162",
+      "gdpr-art89",
+      "gdpr-rct38",
+      "gdpr-rct28",
+      "gdpr-rct71",
+      "gdpr-rct62",
+      "gdpr-rct78"
+    ],
+    "rr": 0.2,
+    "recall@1": 0.0,
+    "recall@3": 0.0,
+    "recall@5": 1.0,
+    "recall@10": 1.0
+  },
+  {
+    "id": "q46",
+    "question": "Can EU countries make special rules for processing employee data?",
+    "relevant": [
+      "gdpr-art88"
+    ],
+    "ranked": [
+      "gdpr-art88",
+      "gdpr-rct19",
+      "gdpr-rct10",
+      "gdpr-rct20",
+      "gdpr-art9",
+      "gdpr-art83",
+      "gdpr-rct101",
+      "gdpr-rct23",
+      "gdpr-rct17",
+      "gdpr-rct155"
+    ],
+    "rr": 1.0,
+    "recall@1": 1.0,
+    "recall@3": 1.0,
+    "recall@5": 1.0,
+    "recall@10": 1.0
+  },
+  {
+    "id": "q47",
+    "question": "How does the GDPR deal with journalism and freedom of expression?",
+    "relevant": [
+      "gdpr-art85"
+    ],
+    "ranked": [
+      "gdpr-art85",
+      "gdpr-rct153",
+      "gdpr-art1",
+      "gdpr-rct51",
+      "gdpr-art89",
+      "gdpr-rct13",
+      "gdpr-art25",
+      "gdpr-rct4",
+      "gdpr-art9",
+      "gdpr-rct154"
+    ],
+    "rr": 1.0,
+    "recall@1": 1.0,
+    "recall@3": 1.0,
+    "recall@5": 1.0,
+    "recall@10": 1.0
+  },
+  {
+    "id": "q48",
+    "question": "Can a company use my data for a different purpose than the one it was collected for?",
+    "relevant": [
+      "gdpr-art6",
+      "gdpr-art5"
+    ],
+    "ranked": [
+      "gdpr-rct33",
+      "gdpr-rct70",
+      "gdpr-rct50",
+      "gdpr-rct48",
+      "gdpr-art13",
+      "gdpr-rct62",
+      "gdpr-rct61",
+      "gdpr-art6",
+      "gdpr-rct142",
+      "gdpr-rct47"
+    ],
+    "rr": 0.125,
+    "recall@1": 0.0,
+    "recall@3": 0.0,
+    "recall@5": 0.0,
+    "recall@10": 0.5
+  },
+  {
+    "id": "q49",
+    "question": "From what date did the GDPR start to apply?",
+    "relevant": [
+      "gdpr-art99"
+    ],
+    "ranked": [
+      "gdpr-art97",
+      "gdpr-art99",
+      "gdpr-art94",
+      "gdpr-rct17",
+      "gdpr-rct6",
+      "gdpr-rct105",
+      "gdpr-art96",
+      "gdpr-art25",
+      "gdpr-art50",
+      "gdpr-rct78"
+    ],
+    "rr": 0.5,
+    "recall@1": 0.0,
+    "recall@3": 1.0,
+    "recall@5": 1.0,
+    "recall@10": 1.0
+  },
+  {
+    "id": "q50",
+    "question": "Is fraud prevention a legitimate interest for processing personal data?",
+    "relevant": [
+      "gdpr-rct47",
+      "gdpr-art6"
+    ],
+    "ranked": [
+      "gdpr-rct47",
+      "gdpr-rct46",
+      "gdpr-rct69",
+      "gdpr-rct24",
+      "gdpr-rct39",
+      "gdpr-rct19",
+      "gdpr-rct18",
+      "gdpr-rct88",
+      "gdpr-rct50",
+      "gdpr-rct28"
+    ],
+    "rr": 1.0,
+    "recall@1": 0.5,
+    "recall@3": 0.5,
+    "recall@5": 0.5,
+    "recall@10": 0.5
+  }
+]

@@ -25,6 +25,16 @@ uv run ingest
 This writes `data/processed/documents.parquet` (one row per article / recital) and
 `data/processed/chunks.parquet`.
 
+## Retrieval eval
+
+`eval/gdpr_golden.jsonl` holds 50 questions labelled with the doc_ids that answer them.
+
+```powershell
+uv run evaluate
+```
+
+Prints Recall@k and MRR and writes per-question results to `data/eval/dense.json`.
+
 ## Tests
 
 ```powershell
