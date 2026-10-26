@@ -36,8 +36,8 @@ make things up.
 |---|---|---|
 | 1 | Get the GDPR text and cut it into pieces | ✅ Done |
 | 2 | Write 50 test questions and build a basic search, then score it | ✅ Done |
-| 3 | Make the search smarter (keyword search, combining, reranking) | Next |
-| 4 | Add the AI that writes answers and the AI that checks them | Later |
+| 3 | Make the search smarter (keyword search, combining, reranking) | ✅ Done |
+| 4 | Add the AI that writes answers and the AI that checks them | Next |
 | 5 | Run tests automatically on GitHub whenever code changes | Later |
 | 6 | Optional extras (bigger data tools, Azure cloud) | Optional |
 
@@ -318,25 +318,137 @@ Per-question details are saved to `data/eval/dense.json`.
 
 ---
 
-## 8. Phase 3 (next): Making search smarter
+## 8. Phase 3: Making search smarter
 
-Each idea targets one of the problems above:
+We tried three improvements, one on top of the other, and graded each one on the
+same 50 questions. All the code is in `retrieval.py`.
 
-1. **Keyword search (BM25):** an old-school search that matches exact words.
-   It's great when the question contains specific terms like "data protection
-   officer" or "standard contractual clauses".
-2. **Combining both (RRF, Reciprocal Rank Fusion):** merges the ranking from
-   meaning-search and the ranking from keyword-search into one list. A chunk that
-   ranks well in both moves to the top.
-3. **Reranking (cross-encoder):** a second, more careful AI model reads the
-   question together with each of the top ~20 chunks and re-scores them. It's
-   slower but more accurate, so we only use it on the shortlist.
+### Step 1: Keyword search (BM25)
 
-After each step, we rerun the same 50 questions and compare scores.
+**What it is:** a classic search method, the same family as old search engines.
+It doesn't understand meaning; it counts matching words. It scores a chunk higher
+when:
+
+- the chunk contains the question's words,
+- those words are **rare** in the GDPR overall ("encryption" counts for more than
+  "data", which is everywhere),
+- the chunk is short, so the match isn't diluted.
+
+**Preparing the words (tokenizing):** before searching, we lowercase everything,
+split it into words, and drop very common words like "the", "is", "what" (called
+**stopwords**). *"What is the Right to Erasure?"* becomes `["right", "erasure"]`.
+
+**Why try it:** meaning-search can miss exact legal terms. If someone asks about
+"standard contractual clauses", keyword search finds chunks with those exact words.
+
+**Result on its own:** worse than meaning-search (correct article first only 26%
+of the time). People ask in everyday words, and the law uses legal words. "Delete
+my data" doesn't contain the word "erasure", so keyword search can't connect them.
+Its job is to *help* the other search, not replace it.
+
+### Step 2: Combining both (hybrid search with RRF)
+
+**The problem:** we now have two ranked lists per question, one from each search.
+Their scores are on completely different scales (meaning-search gives 0 to 1,
+keyword search gives 0 to 30 or more), so we can't just add the scores.
+
+**The solution: Reciprocal Rank Fusion (RRF).** Ignore the scores and use only
+**positions**. Each list gives a chunk points based on where it ranks:
+
+```
+points = 1 / (60 + position)
+```
+
+- 1st place → 1/61 ≈ 0.0164 points
+- 2nd place → 1/62 ≈ 0.0161 points
+- 10th place → 1/70 ≈ 0.0143 points
+
+Add up the points from both lists. A chunk that ranks **fairly well in both**
+beats a chunk that ranks first in one and is missing from the other. The 60 is a
+standard value that stops the first place from dominating everything.
+
+**Example:** chunk B is 2nd in both lists (0.0161 + 0.0161 = 0.0323 points).
+Chunk A is 1st in one list only (0.0164 points). B wins, because both searches
+agree it's relevant.
+
+**Result:** a small improvement (correct article first 37% of the time, in the
+top 3 for 69%).
+
+### Step 3: Reranking (cross-encoder)
+
+**The idea:** the first two searches are fast but shallow. They look at the
+question and each chunk **separately**, turn them into numbers, and compare the
+numbers. A **cross-encoder** reads the question and the chunk **together**, word
+by word, the way a person would, and judges how well the chunk answers the
+question. That's much more accurate but much slower.
+
+**The trick:** use the fast search to make a **shortlist** (the top 30 chunks),
+then let the slow, careful model re-order only those 30.
+
+- **Model:** `cross-encoder/ms-marco-MiniLM-L-6-v2`
+- **Why this one:** free, small (about 90 MB), runs on a laptop, and was trained
+  on a million real search questions from Bing. It's a well-known, reliable
+  starting choice.
+
+**Result:** the biggest jump. The correct article comes first 47% of the time
+(was 36%), and it's in the top 3 for 80% (was 64%).
+
+### Phase 3 results: everything side by side
+
+| Search method | Right article 1st | In top 3 | In top 5 | In top 10 | MRR |
+|---|---|---|---|---|---|
+| Meaning-search only (Phase 2) | 36% | 64% | 74% | 84% | 0.545 |
+| Keyword search only | 26% | 49% | 61% | 70% | 0.445 |
+| Both combined (hybrid) | 37% | 69% | 77% | 81% | 0.577 |
+| **Combined + reranker** | **47%** | **80%** | **84%** | **86%** | **0.670** |
+
+**The winner is "combined + reranker"**, and we'll use it in Phase 4.
+
+### What's still going wrong?
+
+Looking at the 25 questions the best version still gets wrong, **most have the
+correct article in 2nd place, right behind its matching recital**. For example,
+for "How long does a company have to tell the regulator about a data breach?" it
+returns Recital 85 first and Article 33 second.
+
+That matters less than it sounds. In Phase 4 the AI will read the **top few**
+chunks, not just the first, so it will see both the explanation and the rule.
+The top-3 score (80%) is the number that matters most for the answers.
+
+**Things we could try later:**
+
+- **Give articles a small boost** over recitals. It's easy, but we'd have to be
+  careful not to tune it just to make our 50 questions look good.
+- **A bigger reranker model** (e.g. `BAAI/bge-reranker-base`). It's more
+  accurate but about 10 times larger and slower.
+- **More test questions**, so the scores are more reliable. With 50 questions,
+  one question = 2%.
+
+### Run Phase 3 yourself
+
+```powershell
+uv run evaluate                  # score all four methods
+uv run evaluate --show-misses    # also list the questions each method gets wrong
+uv run evaluate --retrievers dense rerank   # only some methods
+```
+
+The first run downloads the reranker model (about 90 MB).
 
 ---
 
-## 9. Saving our work with Git
+## 9. Phase 4 (next): Writing and checking answers
+
+1. **Generator:** an AI (OpenAI, which needs the `.env` key) reads the top chunks
+   and writes an answer, citing the articles it used.
+2. **Fact-checker:** a second AI checks each claim in the answer against the
+   chunks: supported or not?
+3. **Bayesian confidence:** we turn the fact-check results into a confidence
+   score with a range, using a Beta distribution. If confidence is low, the
+   system retries with more text or says it isn't sure.
+
+---
+
+## 10. Saving our work with Git
 
 Git keeps **save points** (called **commits**) of the project.
 
@@ -352,6 +464,8 @@ Save points so far:
 
 1. `Phase 1: GDPR ingestion and chunking`
 2. `Phase 2: golden set and dense-retrieval baseline`
+3. `Add beginner-friendly project guide`
+4. `Phase 3: BM25, hybrid RRF and cross-encoder reranking`
 
 Useful commands:
 
@@ -362,7 +476,7 @@ git status            # see what changed since the last save point
 
 ---
 
-## 10. Glossary
+## 11. Glossary
 
 | Term | Meaning |
 |---|---|
@@ -375,6 +489,12 @@ git status            # see what changed since the last save point
 | **Dense retrieval** | Searching by meaning using embeddings |
 | **BM25** | Classic keyword search |
 | **Reranker / cross-encoder** | A slower, more careful model that re-orders the top results |
+| **Tokenizing** | Splitting text into individual words for keyword search |
+| **Stopwords** | Very common words ("the", "is") ignored by keyword search |
+| **Hybrid search** | Using meaning-search and keyword search together |
+| **RRF (Reciprocal Rank Fusion)** | Merging ranked lists using positions, not scores |
+| **Shortlist** | The top results from fast search, handed to the slower reranker |
+| **Beta distribution** | The math used for the Bayesian confidence score (Phase 4) |
 | **Golden set** | Questions with known correct answers, used to grade the system |
 | **Baseline** | The first simple version, which later versions must beat |
 | **Recall@k** | Share of questions where the right answer is in the top k results |

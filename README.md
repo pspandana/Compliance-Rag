@@ -33,7 +33,16 @@ This writes `data/processed/documents.parquet` (one row per article / recital) a
 uv run evaluate
 ```
 
-Prints Recall@k and MRR and writes per-question results to `data/eval/dense.json`.
+Compares four retrievers (dense, BM25, hybrid RRF, hybrid + cross-encoder rerank) on
+Recall@k and MRR, and writes per-question results to `data/eval/<retriever>.json`.
+Add `--show-misses` to list the questions each retriever ranks wrong.
+
+| retriever | R@1 | R@3 | R@5 | R@10 | MRR |
+|---|---|---|---|---|---|
+| dense (bge-small-en-v1.5) | 0.36 | 0.64 | 0.74 | 0.84 | 0.545 |
+| bm25 | 0.26 | 0.49 | 0.61 | 0.70 | 0.445 |
+| hybrid (RRF) | 0.37 | 0.69 | 0.77 | 0.81 | 0.577 |
+| hybrid + rerank (ms-marco-MiniLM-L-6-v2) | 0.47 | 0.80 | 0.84 | 0.86 | 0.670 |
 
 ## Tests
 
