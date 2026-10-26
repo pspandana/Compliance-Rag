@@ -9,7 +9,8 @@ from compliance_rag.ingest import PROJECT_ROOT
 DEFAULT_OPENAI_MODEL = "gpt-5.4-mini"
 
 
-def get_chat_model():
+def get_chat_model(model: str | None = None):
+    """Chat model for the configured provider. `model` overrides OPENAI_MODEL (OpenAI only)."""
     load_dotenv(PROJECT_ROOT / ".env")
     provider = os.getenv("LLM_PROVIDER", "openai").strip().lower()
 
@@ -23,4 +24,4 @@ def get_chat_model():
         raise SystemExit("OPENAI_API_KEY is not set. Copy .env.example to .env and add your key.")
     from langchain_openai import ChatOpenAI
 
-    return ChatOpenAI(model=os.getenv("OPENAI_MODEL", DEFAULT_OPENAI_MODEL))
+    return ChatOpenAI(model=model or os.getenv("OPENAI_MODEL", DEFAULT_OPENAI_MODEL))

@@ -38,8 +38,8 @@ make things up.
 | 2 | Write 50 test questions and build a basic search, then score it | ✅ Done |
 | 3 | Make the search smarter (keyword search, combining, reranking) | ✅ Done |
 | 4 | Add the AI that writes answers and the AI that checks them | ✅ Done |
-| 5 | Run tests automatically on GitHub whenever code changes | Next |
-| 6 | Optional extras (bigger data tools, Azure cloud) | Optional |
+| 5 | Grader agent, abstain / human review, fuller confidence score, article filter, LLM judge, regression gate, GitHub Actions file | ✅ Done (the GitHub part is untested until the repo is pushed) |
+| 6 | Optional extras (PySpark, many documents with versions, Docker, Terraform, Azure AI Foundry, Confluence) | Not started |
 
 ---
 
@@ -77,15 +77,23 @@ compliance-rag/
 │   ├── retrieval.py        ← Phases 2-3: the search methods
 │   ├── evaluate.py         ← Phases 2-3: scores the search
 │   ├── llm.py              ← Phase 4: connects to OpenAI
-│   ├── answer.py           ← Phase 4: writes, checks and retries answers
-│   └── confidence.py       ← Phase 4: the Bayesian confidence score
+│   ├── answer.py           ← Phases 4-5: the full pipeline and its evaluation
+│   ├── grader.py           ← Phase 5: the Grader agent
+│   ├── confidence.py       ← Phases 4-5: Bayesian confidence and the routing rule
+│   ├── calibrate.py        ← Phase 5: turns reranker scores into probabilities
+│   ├── judge.py            ← Phase 5: LLM judge for answer correctness
+│   └── gate.py             ← Phase 5: fails if quality drops below the baseline
 ├── tests/                  ← small checks that the code works
+├── .github/workflows/ci.yml ← Phase 5: GitHub runs lint, tests and the gate
 ├── eval/
-│   └── gdpr_golden.jsonl   ← the 50 test questions with correct answers
-├── data/                   ← downloaded and generated data (not saved in Git)
-│   ├── raw/gdpr.html       ← the GDPR web page
-│   ├── processed/          ← the cut-up text
-│   └── eval/dense.json     ← detailed search results per question
+│   ├── gdpr_golden.jsonl   ← the 50 test questions with correct answers
+│   ├── gdpr_unanswerable.jsonl ← 10 questions the GDPR cannot answer
+│   ├── calibration.json    ← the fitted score-to-probability curve
+│   └── baseline.json       ← the numbers the gate compares against
+├── data/
+│   ├── raw/gdpr.html       ← the GDPR web page (not saved in Git)
+│   ├── processed/          ← the cut-up text (saved in Git, so GitHub can run the checks)
+│   └── eval/               ← detailed results per question (not saved in Git)
 ├── docs/GUIDE.md           ← this file
 ├── pyproject.toml          ← list of packages and commands
 ├── .env.example            ← template for secret keys (needed from Phase 4)
@@ -551,7 +559,13 @@ Sources: Article 17 - Right to erasure ('right to be forgotten'); Recital 66
 Attempts: 1
 ```
 
-### Testing it on all 50 questions
+> **Note:** this section describes the *first version* of the answer pipeline. Phase 5
+> (next section) added a grader, abstaining, a fuller confidence score and a judge, so
+> the numbers below are the old ones.
+
+### Testing it on all 50 questions (first version)
+
+This was run with the Phase 4 pipeline (it has since been replaced):
 
 ```powershell
 uv run ask --golden 50
@@ -608,11 +622,202 @@ as the checker would be a stronger test.
 
 ---
 
-## 10. Phase 5 (next): Automatic checks on GitHub
+## 10. Phase 5: Smarter agents, safer decisions, and a quality gate
 
-Every time code is pushed to GitHub, GitHub Actions will automatically run the
-tests and the search evaluation (no API key needed for those). This catches
-mistakes before they pile up. It needs the project on GitHub first.
+Phase 4 had a weakness: it always produced an answer, even when the GDPR couldn't
+answer the question, and it fed the writer some off-topic text. Phase 5 fixes that
+and adds a safety net. The pipeline is now **three AI agents** plus a decision step:
+
+```
+question → search (articles only) → GRADER → GENERATOR → VERIFIER → confidence → decision
+                                       ↓ nothing relevant                           ├ auto-answer
+                                    abstain                                         ├ human review
+                                                                                    └ abstain
+```
+
+Try it (the last one should refuse):
+
+```powershell
+uv run ask "Can I ask a company to delete my data?"
+uv run ask "Who won the 2018 FIFA World Cup?"
+```
+
+### Step 1: Metadata filter ("articles only")
+
+Every chunk now carries a tag, `kind`: **article** or **recital**. The search can be
+told to look only at chunks with a given tag (a **metadata filter**).
+
+Articles are the binding rules; recitals are background. Searching articles only:
+
+| Search | Right article 1st | In top 3 | MRR |
+|---|---|---|---|
+| Articles and recitals (Phase 3) | 47% | 80% | 0.670 |
+| **Articles only** | **81%** | **88%** | **0.878** |
+
+**Be careful with this result.** I wrote the answer key, and 48 of the 50 questions
+are labelled with an *article*. So the filter is partly rewarded for matching my
+labelling style. Recitals are still useful for explaining a rule. The pipeline uses
+articles-only by default; `--kind any` turns the filter off.
+
+### Step 2: The Grader agent
+
+Search ranks chunks but never says "none of these help". The **Grader** is an AI
+call that reads the question and each of the top 8 chunks and marks each one
+relevant or not. Only relevant chunks (at most 5) go to the writer. If *no* chunk
+is relevant, we try once with a bigger pool (15), then give up.
+
+Measured on the 50 questions (a chunk counts as "irrelevant" if it isn't from a
+document our answer key lists):
+
+| | Result |
+|---|---|
+| Irrelevant chunks in the context, before the grader | 66% |
+| Irrelevant chunks in the context, after the grader | **25%** |
+| Questions where the grader kept the right article (when it was in the pool) | **100%** |
+
+This measure is strict, since a neighbouring article can still be useful. We did not
+run the pipeline without the grader to compare answer quality, so we know the grader
+removes noise but not exactly how much it improves answers.
+
+### Step 3: Abstain, or send to a human
+
+The system now makes one of three decisions:
+
+- **Abstain**: the grader found nothing relevant, or the writer found no claims to
+  make. It says "I can't answer this from the GDPR text I have."
+- **Auto**: confident enough to answer directly.
+- **Review**: an answer exists but isn't trusted enough; a person should look.
+
+To test this we wrote **10 questions the GDPR cannot answer** (HIPAA fines, the EU AI
+Act, Irish tax, the World Cup, ...) in `eval/gdpr_unanswerable.jsonl`.
+
+| Unanswerable questions (10) | Result |
+|---|---|
+| Abstained | **10 of 10** (one earlier run sent 1 to human review instead) |
+| Answered automatically (the bad outcome) | **0** |
+
+### Step 4: A fuller Bayesian confidence score
+
+Phase 4's score used only the fact-checker. Now it combines **three kinds of
+evidence** in one Beta distribution. Each is a yes/no observation about "can we trust
+this answer?":
+
+| Evidence | How it counts |
+|---|---|
+| **Verifier** | each claim: supported = 1 success, unsupported = 1 failure |
+| **Grader agreement** | for the 3 best-ranked chunks: grader says relevant = success, not relevant = failure |
+| **Retrieval relevance** | the search's best score, turned into a probability *p*; counts as 2 half-observations (*p* successes and 1−*p* failures) |
+
+```
+confidence = (1 + successes) / (2 + successes + failures)    ← the posterior mean
+```
+
+**Calibration (turning a score into a probability):** the reranker gives raw scores
+like −5.9 or −10.7 that don't mean anything by themselves. `uv run calibrate` fits a
+simple curve using the 60 questions (50 answerable, 10 not) so that a score becomes
+an honest probability. For example, a score of −10 (off-topic) maps to about 0.29 and
+−4 (a good match) to about 0.71.
+
+**The decision rule** (`confidence.py`): abstain if no claims or no relevant chunks;
+**auto** if confidence ≥ 0.80 *and* the lower end of the 90% range ≥ 0.55; otherwise
+**review**.
+
+### Step 5: Grading answers with a judge (LLM-as-judge)
+
+Until now we checked "did the answer cite the right article?" and "are the claims
+supported?". Neither says whether the answer is actually **correct**. So a bigger AI
+(`gpt-5.4`, not the small writer model) acts as a **judge**: it reads the question,
+the system's answer and the **text of the gold articles** from our answer key, and
+says *correct*, *partial* or *incorrect*. Using a bigger, different model than the
+writer reduces the chance of it sharing the writer's mistakes.
+
+Words used in the project for the three quality measures:
+
+- **Groundedness / faithfulness**: are the claims supported by the retrieved text?
+  (the verifier; in this project they are the same measurement)
+- **Correctness**: does the answer agree with the gold text? (the judge)
+- **Citation hit**: does it cite a labelled document?
+
+### Results on the 50 answerable questions (the saved baseline)
+
+| Measure | Result |
+|---|---|
+| Cites a labelled document | 94% |
+| Claims supported (groundedness) | 99.4% |
+| Judged **correct** | **80%** (12% partial, 8% incorrect) |
+| Routed to auto / review / abstain | 32% / 68% / 0% |
+
+The AI is not fully repeatable: a second run gave 96% / 100% / 80% and 24% auto.
+That is why the gate (below) allows a small margin for answer metrics.
+
+### The honest finding: what the confidence score can and cannot do
+
+- ✅ It **separates answerable from unanswerable questions almost perfectly**
+  (AUC ≈ 1.0; every unanswerable question scored 0.46 or less, and 9 of 10 are
+  abstained outright).
+- ❌ It does **not** predict whether an answer is *correct*. Among answerable
+  questions, auto-answered answers were correct 69% of the time vs 85% for those sent
+  to review (AUC 0.41, no better than chance, on only 50 questions). Several
+  **partial** answers got high confidence because the verifier only checks that what
+  is *said* is supported, not that the answer is *complete*.
+- So today the score is good at "should we refuse?" and weak at "is this right?". Also,
+  routing 68% of answers to human review is cautious, not clever. We did **not** tune
+  the thresholds to make the numbers look better.
+
+**Ways to improve it next:** a "completeness" check in the verifier; more questions
+(50 is small, and one question moves a number by 2%); a stronger or separate verifier
+model.
+
+### Step 6: The regression gate
+
+The **gate** is a script that fails when quality drops below a saved baseline
+(`eval/baseline.json`), so a change that quietly makes things worse gets caught.
+
+```powershell
+uv run gate               # retrieval metrics only; free, no API key (what CI runs)
+uv run gate --answers     # also the full answer evaluation (costs a little API money)
+uv run gate --update      # save today's numbers as the new baseline
+```
+
+| What is checked | Allowed drop |
+|---|---|
+| Recall@1, Recall@3, MRR | 0.02 (search is deterministic, so this is tight) |
+| Cites, supported, correct, abstained | 0.06 (AI answers vary run to run) |
+| Unanswerable questions answered automatically | none (must stay 0) |
+
+Run it after changing chunking, search, prompts or models.
+
+### Step 7: GitHub Actions (written, not yet run)
+
+`.github/workflows/ci.yml` tells GitHub to run, on every push: the linter, the unit
+tests, and the retrieval gate. A second job runs the full answer gate, only when you
+start it by hand (it costs API money and needs an `OPENAI_API_KEY` secret in the
+repo settings). **This file has never run**, because the project isn't on GitHub yet.
+Expect a first-run fix or two.
+
+To make this possible the cleaned GDPR text (`data/processed/`, about 300 KB of public
+EU law) is now saved in Git, since GitHub doesn't have the web page we downloaded.
+
+### Tests
+
+17 unit tests pass: the parser, the chunker, the scoring maths, the confidence
+maths, the calibration, routing and the gate comparison. The AI-calling parts (grader,
+generator, verifier, judge) are checked by the evaluation runs, not by unit tests.
+
+---
+
+## What this project does and doesn't show
+
+It is a working, measured, single-document prototype of the pattern
+*retrieve → grade → generate → verify → decide*. **Not built:**
+
+- many documents, document versions or effective dates (we have only the GDPR);
+- PySpark ingestion, deduplication (the cleaning uses BeautifulSoup);
+- Azure AI Foundry evaluations, Docker, Terraform, Confluence;
+- tuning of chunk size and prompts (only search methods were tuned).
+
+Only quote numbers this project measured: the tables above, not figures from
+elsewhere.
 
 ---
 
@@ -635,6 +840,8 @@ Save points so far:
 3. `Add beginner-friendly project guide`
 4. `Phase 3: BM25, hybrid RRF and cross-encoder reranking`
 5. `Phase 4: generator, fact-checker, Beta confidence and self-correction`
+6. `Stop tracking generated eval results`
+7. `Phase 5: grader, abstain/review routing, calibrated confidence, judge, gate, CI`
 
 Useful commands:
 
@@ -673,6 +880,15 @@ git status            # see what changed since the last save point
 | **Credible interval** | The range the true confidence probably lies in (we use 90%) |
 | **Self-correction** | Retrying with more text and feedback when a claim fails the check |
 | **Faithfulness** | Whether an answer sticks to its sources (not the same as being complete) |
+| **Grader** | An AI step that throws away retrieved chunks that don't help answer the question |
+| **Abstain** | Refusing to answer because there is no evidence |
+| **Escalate / human review** | Passing a shaky answer to a person instead of sending it automatically |
+| **Metadata filter** | Searching only chunks with a given tag (here: only articles) |
+| **Calibration** | Converting a raw score into an honest probability using known examples |
+| **LLM-as-judge** | Using a (bigger) AI to grade another AI's answers |
+| **Regression gate** | A check that fails when quality drops below a saved baseline |
+| **CI (continuous integration)** | A server that runs your checks automatically on every change |
+| **AUC** | How well a score separates two groups: 1.0 perfectly, 0.5 no better than a coin flip |
 | **Golden set** | Questions with known correct answers, used to grade the system |
 | **Baseline** | The first simple version, which later versions must beat |
 | **Recall@k** | Share of questions where the right answer is in the top k results |

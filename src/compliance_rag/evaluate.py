@@ -12,12 +12,22 @@ from compliance_rag.ingest import PROJECT_ROOT
 from compliance_rag.retrieval import RETRIEVERS, build_retrievers
 
 GOLDEN_PATH = PROJECT_ROOT / "eval" / "gdpr_golden.jsonl"
+UNANSWERABLE_PATH = PROJECT_ROOT / "eval" / "gdpr_unanswerable.jsonl"
 RESULTS_DIR = PROJECT_ROOT / "data" / "eval"
 KS = (1, 3, 5, 10)
 
 
-def load_golden(path: Path = GOLDEN_PATH) -> list[dict]:
+def _load_jsonl(path: Path) -> list[dict]:
     return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+
+
+def load_golden(path: Path = GOLDEN_PATH) -> list[dict]:
+    return _load_jsonl(path)
+
+
+def load_unanswerable(path: Path = UNANSWERABLE_PATH) -> list[dict]:
+    """Questions the GDPR cannot answer; the system should abstain or escalate."""
+    return _load_jsonl(path)
 
 
 def rank_docs(chunk_doc_ids: list[str]) -> list[str]:
@@ -46,28 +56,33 @@ def score(retriever, golden: list[dict], top_chunks: int) -> list[dict]:
     return rows
 
 
+def summarize(rows: list[dict]) -> dict[str, float]:
+    n = len(rows)
+    summary = {f"recall@{k}": sum(r[f"recall@{k}"] for r in rows) / n for k in KS}
+    summary["mrr"] = sum(r["rr"] for r in rows) / n
+    return summary
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--retrievers", nargs="+", choices=RETRIEVERS, default=list(RETRIEVERS))
+    parser.add_argument("--kind", choices=["article", "recital"], help="metadata filter: only search this kind")
     parser.add_argument("--top-chunks", type=int, default=50, help="chunks retrieved per question")
     parser.add_argument("--show-misses", action="store_true", help="list questions where the top result is wrong")
     args = parser.parse_args()
 
     golden = load_golden()
-    retrievers = build_retrievers(args.retrievers)
+    retrievers = build_retrievers(args.retrievers, kind=args.kind)
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
     header = f"{'retriever':<10}" + "".join(f"{f'R@{k}':>8}" for k in KS) + f"{'MRR':>8}"
     lines = [header]
     for name, retriever in retrievers.items():
         rows = score(retriever, golden, args.top_chunks)
-        n = len(rows)
-        lines.append(
-            f"{name:<10}"
-            + "".join(f"{sum(r[f'recall@{k}'] for r in rows) / n:>8.3f}" for k in KS)
-            + f"{sum(r['rr'] for r in rows) / n:>8.3f}"
-        )
-        (RESULTS_DIR / f"{name}.json").write_text(json.dumps(rows, indent=2, ensure_ascii=False), encoding="utf-8")
+        s = summarize(rows)
+        lines.append(f"{name:<10}" + "".join(f"{s[f'recall@{k}']:>8.3f}" for k in KS) + f"{s['mrr']:>8.3f}")
+        suffix = f"_{args.kind}" if args.kind else ""
+        (RESULTS_DIR / f"{name}{suffix}.json").write_text(json.dumps(rows, indent=2, ensure_ascii=False), encoding="utf-8")
 
         if args.show_misses:
             misses = [r for r in rows if r["rr"] < 1]
@@ -75,7 +90,8 @@ def main() -> None:
             for r in misses:
                 print(f"  {r['id']} expected {r['relevant']}, got {r['ranked'][:3]}  {r['question']}")
 
-    print(f"\n{len(golden)} questions\n" + "\n".join(lines))
+    where = f", only {args.kind}s" if args.kind else ""
+    print(f"\n{len(golden)} questions{where}\n" + "\n".join(lines))
     print(f"\nPer-question results: {RESULTS_DIR}")
 
 

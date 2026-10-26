@@ -53,13 +53,30 @@ uv run ask "Can I ask a company to delete my data?"
 uv run ask --golden 50     # answer the golden set; writes data/eval/answers.json
 ```
 
-Pipeline: hybrid + rerank retrieval (top 5) → generator lists claims with chunk
-citations → fact-checker labels each claim → Beta(1 + supported, 1 + unsupported)
-posterior mean and 90% credible interval → one retry with top 10 and the checker's
-feedback if any claim fails.
+Pipeline: article-only hybrid + rerank retrieval (pool of 8) → **Grader** keeps the
+relevant chunks (≤5) → **Generator** lists claims with chunk citations → **Verifier**
+labels each claim → Beta posterior over verifier, grader-agreement and calibrated
+retrieval evidence → route: `auto` / `review` (human) / `abstain`. One retry with a
+bigger pool (15) if the grader rejects everything or a claim is unsupported.
 
-On the golden set: 86% of answers cite the labelled article, 100% of 205 claims
-are supported, mean confidence 0.82, and 4 questions needed a retry.
+```powershell
+uv run ask --golden 50 --unanswerable   # evaluate, with an LLM judge (gpt-5.4) for correctness
+uv run calibrate                        # refit reranker score -> probability (after changing retrieval)
+uv run gate                             # regression gate (retrieval only, offline)
+uv run gate --answers                   # ... plus the full answer evaluation
+uv run gate --update                    # accept current numbers as the new baseline
+```
+
+Baseline (saved in `eval/baseline.json`; answer metrics vary a few points run to run):
+
+| Retrieval (articles only, rerank) | R@1 0.81 | R@3 0.88 | MRR 0.878 |
+|---|---|---|---|
+| **Answers (50 questions)** | cites labelled doc 94% | claims supported 99% | judged correct 80% |
+| **Unanswerable (10)** | abstained 10/10 | auto-answered 0 | |
+
+Known limits: confidence separates answerable from unanswerable questions well but
+does not predict correctness (AUC 0.41 on 50 questions); the golden set favours
+articles, which flatters the article filter. See `docs/GUIDE.md` for details.
 
 ## Tests
 
@@ -73,5 +90,5 @@ uv run pytest
 2. Golden set (50 questions) and dense-retrieval baseline: Recall@k, MRR
 3. Hybrid retrieval (BM25 + dense, RRF) and cross-encoder reranking
 4. Generator and fact-checker agents with Beta-posterior confidence
-5. GitHub Actions: tests and retrieval eval on every push
-6. Optional: PySpark ingestion, Azure OpenAI, Terraform
+5. Grader, abstain / human review, calibrated confidence, LLM judge, regression gate, GitHub Actions workflow (written, not yet run on GitHub)
+6. Not started: PySpark ingestion, multiple documents and versions, Docker, Terraform, Azure AI Foundry, Confluence

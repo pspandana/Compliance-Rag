@@ -27,8 +27,10 @@ STOPWORDS = {
 }  # fmt: skip
 
 
-def load_chunks(path=PROCESSED_DIR / "chunks.parquet") -> list[dict]:
-    return pq.read_table(path).to_pylist()
+def load_chunks(path=PROCESSED_DIR / "chunks.parquet", kind: str | None = None) -> list[dict]:
+    """Load chunks, optionally keeping only one kind ("article" / "recital")."""
+    chunks = pq.read_table(path).to_pylist()
+    return [c for c in chunks if kind is None or c["kind"] == kind]
 
 
 def passage_text(chunk: dict) -> str:
@@ -115,9 +117,13 @@ class RerankRetriever:
 RETRIEVERS = ("dense", "bm25", "hybrid", "rerank")
 
 
-def build_retrievers(names: list[str]) -> dict:
-    """Build the named retrievers, sharing the models between them."""
-    chunks = load_chunks()
+def build_retrievers(names: list[str], kind: str | None = None) -> dict:
+    """Build the named retrievers, sharing the models between them.
+
+    `kind` filters the corpus before indexing (metadata-filtered retrieval), so the
+    search never ranks chunks of the other kind.
+    """
+    chunks = load_chunks(kind=kind)
     needed = set(names)
     if needed & {"hybrid", "rerank"}:
         needed |= {"dense", "bm25"}

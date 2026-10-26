@@ -39,6 +39,7 @@ class Chunk:
     chunk_id: str
     doc_id: str
     source: str
+    kind: str  # "article" or "recital", copied from the document
     title: str
     text: str
 
@@ -128,7 +129,7 @@ def chunk_document(doc: Document, max_chars: int = 1200) -> list[Chunk]:
         groups.append(current)
 
     return [
-        Chunk(f"{doc.doc_id}-c{i}", doc.doc_id, doc.source, doc.title, text)
+        Chunk(f"{doc.doc_id}-c{i}", doc.doc_id, doc.source, doc.kind, doc.title, text)
         for i, text in enumerate(groups)
     ]
 

@@ -5,8 +5,8 @@ __pycache__/
 .ruff_cache/
 .env
 
-# Raw sources are downloaded by hand; processed data and indexes are rebuilt from them.
+# Raw sources are downloaded by hand and not committed. data/processed/ (documents and
+# chunks, ~300 KB of public EU law) IS committed so CI can run the evals without the raw page.
 data/raw/
-data/processed/
 data/chroma/
 data/eval/
