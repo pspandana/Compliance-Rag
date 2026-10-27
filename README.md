@@ -114,6 +114,11 @@ clearly hurt. The "complete" prompt variants did not beat run-to-run noise: iden
 flipped the verdict on 7 of 70 questions. Seventy questions cannot detect small gains.
 Details in `docs/GUIDE.md` (Phase 8).
 
+## Explaining the project
+
+`docs/EXPLAINING.md` has short answers on why each piece (and each tool not yet built) is
+used, likely questions, and which claims not to make.
+
 ## Tests
 
 ```powershell
