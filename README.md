@@ -126,7 +126,7 @@ uv run pytest
 2. Golden set (50 questions) and dense-retrieval baseline: Recall@k, MRR
 3. Hybrid retrieval (BM25 + dense, RRF) and cross-encoder reranking
 4. Generator and fact-checker agents with Beta-posterior confidence
-5. Grader, abstain / human review, calibrated confidence, LLM judge, regression gate, GitHub Actions workflow (written, not yet run on GitHub)
+5. Grader, abstain / human review, calibrated confidence, LLM judge, regression gate, GitHub Actions workflow (lint, tests and retrieval gate pass on GitHub; the manual answer-gate job has not been run)
 6. Second version of the law (UK GDPR): jurisdiction / effective date / version metadata, metadata-filtered and jurisdiction-aware retrieval and answers
 7. PySpark ingestion (clean, tag, dedupe, link identical text across jurisdictions, chunk), output checked against the plain-Python pipeline
 8. Chunk-size and prompt tuning with a holdout half and a noise measurement (no change adopted)

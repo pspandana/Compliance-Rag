@@ -795,13 +795,14 @@ uv run gate --update      # save today's numbers as the new baseline
 
 Run it after changing chunking, search, prompts or models.
 
-### Step 7: GitHub Actions (written, not yet run)
+### Step 7: GitHub Actions (passing on GitHub)
 
 `.github/workflows/ci.yml` tells GitHub to run, on every push: the linter, the unit
 tests, and the retrieval gate. A second job runs the full answer gate, only when you
 start it by hand (it costs API money and needs an `OPENAI_API_KEY` secret in the
-repo settings). **This file has never run**, because the project isn't on GitHub yet.
-Expect a first-run fix or two.
+repo settings). The project was pushed to GitHub at the end of Phase 8, and the first
+run passed (lint, unit tests, retrieval gate) with no fixes needed. The manual
+answer-gate job has still not been run.
 
 To make this possible the cleaned GDPR text (`data/processed/`, about 300 KB of public
 EU law) is now saved in Git, since GitHub doesn't have the web page we downloaded.
