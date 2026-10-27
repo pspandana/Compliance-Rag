@@ -117,7 +117,8 @@ Details in `docs/GUIDE.md` (Phase 8).
 ## Explaining the project
 
 `docs/EXPLAINING.md` has short answers on why each piece (and each tool not yet built) is
-used, likely questions, and which claims not to make.
+used, likely questions, and which claims not to make. `docs/INTERVIEW_QA.md` goes deeper:
+33 interview-style questions on the challenges and decisions, in simple English.
 
 ## Tests
 
