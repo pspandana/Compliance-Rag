@@ -17,7 +17,7 @@ I also measured where it fails, which is more useful than a single accuracy numb
 
 | Piece | Status | Why we used it (simple English) |
 |---|---|---|
-| Hybrid search + reranker | Built | Keyword search finds exact legal terms; meaning search finds paraphrases. Together they beat either alone, and the reranker re-orders the top results. First answer correct went from 0.47 to 0.81. |
+| Hybrid search + reranker | Built | Keyword search finds exact legal terms; meaning search finds paraphrases. Together they beat either alone, and the reranker re-orders the top results. Same corpus, first answer correct: 0.56 (meaning search alone) to 0.81 (hybrid + rerank). |
 | Grader / Generator / Verifier | Built | Splitting the job makes each step checkable. The grader drops irrelevant text, the generator cites sources, and the verifier catches unsupported claims. 97% of claims came back supported. |
 | Beta (Bayesian) confidence | Built | A yes/no from the model is not enough. The score combines the verifier, the grader and search strength, and gives a range. Auto-answer only if the average is high and the low end of the range is still safe. |
 | Abstain / human review | Built | In compliance a refusal beats a wrong answer. 10 of 12 unanswerable questions were refused and 2 went to review. |

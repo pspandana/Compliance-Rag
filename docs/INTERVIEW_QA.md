@@ -27,7 +27,7 @@ each claim as supported or not. If the grader rejects everything or a claim is u
 the system retries once with a bigger pool of chunks.
 
 **Q4. What are the headline results?**
-- Search: the right article is first for 81% of 50 EU questions (it was 36% at the start).
+- Search: the right article is first for 81% of 50 EU questions (56% with meaning search alone on the same corpus).
 - Answers: 97% of claims were supported by the sources, and 94% cited the labelled article.
 - Correctness, scored by an LLM judge: 76% on the EU questions, 90% on the 20 jurisdiction
   questions.
@@ -68,7 +68,8 @@ Spark ingestion.
 ## Part 3: Search challenges
 
 **Q9. How did you improve search quality?**
-In three steps. Meaning-based search alone put the right article first only 36% of the time.
+In three steps. Meaning-based search alone put the right article first 56% of the time (36% on the
+original corpus with recitals included).
 Adding keyword search (BM25) and merging the two lists (Reciprocal Rank Fusion) helped,
 because legal text has exact terms that meaning search can blur. A reranker then re-scored
 the top results with the question and each chunk read together. That took it to 81%.
@@ -283,9 +284,13 @@ Never mix the two. Do not give this repo's numbers as the work project's, or the
 ### Bullet 5: "50-question golden set ... recall@k and MRR ... groundedness, faithfulness, correctness ... 20% to approximately 60%"
 - **Backed:** the 50-question set, Recall@k, MRR, supported-claims (groundedness/faithfulness)
   and judged correctness. Tuning of chunking, hybrid search and reranking.
-- **This repo's own improvement:** R@1 went 0.36 (dense only) → 0.81 (hybrid + rerank) on
-  the 50 EU questions; MRR 0.545 → 0.878.
-- **Not backed:** "20% to 60%". If it's from real work, own it as that. If not, use 0.36 → 0.81.
+- **This repo's own improvement, same corpus (articles only, EU + UK):** R@1 0.56 (dense
+  only) → 0.81 (hybrid + rerank); MRR 0.731 → 0.878. On the original corpus with recitals
+  included it was smaller: R@1 0.36 → 0.47, MRR 0.545 → 0.670. Never quote 0.36 → 0.81,
+  because that compares two different corpora. Part of the gain comes from the
+  articles-only filter, and the golden set favours articles.
+- **Not backed:** "20% to 60%". If it's from real work, own it as that. If not, use the
+  same-corpus numbers above.
 - **Likely question:** "Define groundedness vs faithfulness vs correctness."
 - **Answer:** "Groundedness: is each claim supported by the retrieved text? Faithfulness: does
   the answer say only what the sources say, with nothing added? Correctness: does it match
@@ -321,7 +326,7 @@ Never mix the two. Do not give this repo's numbers as the work project's, or the
    unanswerable questions but not correct from incorrect ones.
 3. Built a PySpark ingestion pipeline (clean, dedupe, chunk, tag with type, jurisdiction,
    effective date and version) and metadata-filtered retrieval.
-4. Created an 82-question golden set; raised first-answer-correct from 0.36 to 0.81 with
+4. Created an 82-question golden set; raised first-answer-correct from 0.56 to 0.81 (same corpus) with
    hybrid search and reranking; 97% of claims supported, 76–90% judged correct.
 5. Added an LLM-judge regression gate and GitHub Actions CI; ran holdout-based tuning with a
    noise measurement and reported a negative result.
