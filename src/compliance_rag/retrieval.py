@@ -4,6 +4,10 @@
   BM25Retriever    keyword matching
   HybridRetriever  dense + BM25 merged with reciprocal rank fusion
   RerankRetriever  re-scores another retriever's shortlist with a cross-encoder
+
+Every `search(query, k, where=None)` accepts a metadata filter, e.g.
+`{"kind": "article", "jurisdiction": "UK"}`; a value may also be a list of allowed values.
+The filter is applied before ranking, so excluded chunks can never take a top-k slot.
 """
 
 import re
@@ -26,11 +30,11 @@ STOPWORDS = {
     "which", "who", "will", "with", "without", "you", "your",
 }  # fmt: skip
 
+Where = dict[str, "str | list[str]"]
 
-def load_chunks(path=PROCESSED_DIR / "chunks.parquet", kind: str | None = None) -> list[dict]:
-    """Load chunks, optionally keeping only one kind ("article" / "recital")."""
-    chunks = pq.read_table(path).to_pylist()
-    return [c for c in chunks if kind is None or c["kind"] == kind]
+
+def load_chunks(path=PROCESSED_DIR / "chunks.parquet") -> list[dict]:
+    return pq.read_table(path).to_pylist()
 
 
 def passage_text(chunk: dict) -> str:
@@ -42,7 +46,35 @@ def tokenize(text: str) -> list[str]:
     return [t for t in re.findall(r"[a-z0-9]+", text.lower()) if t not in STOPWORDS]
 
 
-class DenseRetriever:
+def matches(chunk: dict, where: Where | None) -> bool:
+    if not where:
+        return True
+    return all(
+        chunk[field] in allowed if isinstance(allowed, (list, tuple, set)) else chunk[field] == allowed
+        for field, allowed in where.items()
+    )
+
+
+class FilterableIndex:
+    """Shared plumbing: a boolean mask over the chunks for a `where` filter."""
+
+    chunks: list[dict]
+
+    def _mask(self, where: Where | None) -> np.ndarray:
+        cache = self.__dict__.setdefault("_mask_cache", {})
+        key = repr(sorted((where or {}).items()))
+        if key not in cache:
+            cache[key] = np.array([matches(c, where) for c in self.chunks])
+        return cache[key]
+
+    def _top(self, scores: np.ndarray, k: int, where: Where | None) -> list[tuple[dict, float]]:
+        mask = self._mask(where)
+        scores = np.where(mask, scores, -np.inf)
+        top = np.argsort(-scores)[: min(k, int(mask.sum()))]
+        return [(self.chunks[i], float(scores[i])) for i in top]
+
+
+class DenseRetriever(FilterableIndex):
     def __init__(self, chunks: list[dict], model_name: str = DENSE_MODEL):
         # Imported here so that tests and light scripts don't pay for loading torch.
         from sentence_transformers import SentenceTransformer
@@ -53,24 +85,20 @@ class DenseRetriever:
             [passage_text(c) for c in chunks], normalize_embeddings=True, batch_size=32
         )
 
-    def search(self, query: str, k: int = 10) -> list[tuple[dict, float]]:
+    def search(self, query: str, k: int = 10, where: Where | None = None) -> list[tuple[dict, float]]:
         q = self.model.encode(QUERY_PREFIX + query, normalize_embeddings=True)
-        scores = self.embeddings @ q
-        top = np.argsort(-scores)[:k]
-        return [(self.chunks[i], float(scores[i])) for i in top]
+        return self._top(self.embeddings @ q, k, where)
 
 
-class BM25Retriever:
+class BM25Retriever(FilterableIndex):
     def __init__(self, chunks: list[dict]):
         from rank_bm25 import BM25Okapi
 
         self.chunks = chunks
         self.bm25 = BM25Okapi([tokenize(passage_text(c)) for c in chunks])
 
-    def search(self, query: str, k: int = 10) -> list[tuple[dict, float]]:
-        scores = self.bm25.get_scores(tokenize(query))
-        top = np.argsort(-scores)[:k]
-        return [(self.chunks[i], float(scores[i])) for i in top]
+    def search(self, query: str, k: int = 10, where: Where | None = None) -> list[tuple[dict, float]]:
+        return self._top(self.bm25.get_scores(tokenize(query)), k, where)
 
 
 def reciprocal_rank_fusion(rankings: list[list[dict]], k: int = 60) -> list[tuple[dict, float]]:
@@ -94,8 +122,8 @@ class HybridRetriever:
         self.retrievers = retrievers
         self.pool = pool
 
-    def search(self, query: str, k: int = 10) -> list[tuple[dict, float]]:
-        rankings = [[c for c, _ in r.search(query, self.pool)] for r in self.retrievers]
+    def search(self, query: str, k: int = 10, where: Where | None = None) -> list[tuple[dict, float]]:
+        rankings = [[c for c, _ in r.search(query, self.pool, where)] for r in self.retrievers]
         return reciprocal_rank_fusion(rankings)[:k]
 
 
@@ -107,8 +135,10 @@ class RerankRetriever:
         self.model = CrossEncoder(model_name)
         self.pool = pool
 
-    def search(self, query: str, k: int = 10) -> list[tuple[dict, float]]:
-        candidates = [c for c, _ in self.first_stage.search(query, self.pool)]
+    def search(self, query: str, k: int = 10, where: Where | None = None) -> list[tuple[dict, float]]:
+        candidates = [c for c, _ in self.first_stage.search(query, self.pool, where)]
+        if not candidates:
+            return []
         scores = self.model.predict([(query, passage_text(c)) for c in candidates])
         top = np.argsort(-scores)[:k]
         return [(candidates[i], float(scores[i])) for i in top]
@@ -117,13 +147,9 @@ class RerankRetriever:
 RETRIEVERS = ("dense", "bm25", "hybrid", "rerank")
 
 
-def build_retrievers(names: list[str], kind: str | None = None) -> dict:
-    """Build the named retrievers, sharing the models between them.
-
-    `kind` filters the corpus before indexing (metadata-filtered retrieval), so the
-    search never ranks chunks of the other kind.
-    """
-    chunks = load_chunks(kind=kind)
+def build_retrievers(names: list[str]) -> dict:
+    """Build the named retrievers, sharing the models between them."""
+    chunks = load_chunks()
     needed = set(names)
     if needed & {"hybrid", "rerank"}:
         needed |= {"dense", "bm25"}

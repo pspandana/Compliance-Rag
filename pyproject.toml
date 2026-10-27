@@ -23,6 +23,7 @@ dependencies = [
 
 [project.scripts]
 ingest = "compliance_rag.ingest:main"
+spark-ingest = "compliance_rag.ingest_spark:main"
 evaluate = "compliance_rag.evaluate:main"
 ask = "compliance_rag.answer:main"
 calibrate = "compliance_rag.calibrate:main"
@@ -36,4 +37,7 @@ build-backend = "uv_build"
 dev = [
     "pytest>=9.1.1",
     "ruff>=0.17.2",
+]
+spark = [
+    "pyspark>=4.2.0",
 ]

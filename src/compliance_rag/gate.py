@@ -13,7 +13,13 @@ import io
 import json
 import sys
 
-from compliance_rag.evaluate import load_golden, score, summarize
+from compliance_rag.evaluate import (
+    GOLDEN_PATH,
+    JURISDICTION_PATH,
+    load_golden,
+    score,
+    summarize,
+)
 from compliance_rag.ingest import PROJECT_ROOT
 from compliance_rag.retrieval import build_retrievers
 
@@ -21,7 +27,7 @@ BASELINE_PATH = PROJECT_ROOT / "eval" / "baseline.json"
 
 # How far a metric may fall below its baseline before the gate fails.
 # Retrieval is deterministic, so its tolerance is tight; LLM answers vary run to run.
-TOLERANCE = {"retrieval": 0.02, "answers": 0.06}
+TOLERANCE = {"retrieval": 0.02, "jurisdiction_retrieval": 0.05, "answers": 0.06}  # 20-question set: 1 question = 5%
 # Metrics where a lower number is better.
 LOWER_IS_BETTER = {"wrongly_auto"}
 RETRIEVAL_KEYS = ("recall@1", "recall@3", "mrr")
@@ -40,9 +46,13 @@ def compare(baseline: dict, current: dict, tolerance: float) -> list[str]:
 
 
 def retrieval_metrics() -> dict:
-    retriever = build_retrievers(["rerank"], kind="article")["rerank"]
-    summary = summarize(score(retriever, load_golden(), 50))
-    return {k: summary[k] for k in RETRIEVAL_KEYS}
+    """Retrieval quality on the 50 EU questions and on the jurisdiction questions (articles only)."""
+    retriever = build_retrievers(["rerank"])["rerank"]
+    metrics = {}
+    for section, path in (("retrieval", GOLDEN_PATH), ("jurisdiction_retrieval", JURISDICTION_PATH)):
+        summary = summarize(score(retriever, load_golden(path), 50, kind="article"))
+        metrics[section] = {k: summary[k] for k in RETRIEVAL_KEYS}
+    return metrics
 
 
 def answer_metrics() -> dict:
@@ -52,9 +62,13 @@ def answer_metrics() -> dict:
     pipeline, judge = AnswerPipeline(), Judge()
     with contextlib.redirect_stdout(io.StringIO()):  # skip the per-question lines
         golden = run_golden(pipeline, judge, 50)
+        jurisdiction = run_golden(pipeline, judge, 1000, JURISDICTION_PATH, "jurisdiction_answers.json")
         unanswerable = run_unanswerable(pipeline, judge)
     merged = {**golden, **unanswerable}
-    return {k: merged[k] for k in ANSWER_KEYS}
+    metrics = {k: merged[k] for k in ANSWER_KEYS}
+    metrics["jurisdiction_cites_all"] = jurisdiction["cites_all_relevant"]
+    metrics["jurisdiction_correct"] = jurisdiction["correct"]
+    return metrics
 
 
 def main() -> None:
@@ -63,7 +77,7 @@ def main() -> None:
     parser.add_argument("--update", action="store_true", help="save the current numbers as the new baseline")
     args = parser.parse_args()
 
-    current = {"retrieval": retrieval_metrics()}
+    current = retrieval_metrics()
     if args.answers or args.update:
         current["answers"] = answer_metrics()
 

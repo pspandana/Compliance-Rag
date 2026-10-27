@@ -16,26 +16,40 @@ uv sync
 1. Open the GDPR on EUR-Lex in a browser:
    https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32016R0679
 2. Save the page (Ctrl+S, "Webpage, HTML only") as `data/raw/gdpr.html`.
-3. Run ingestion:
+3. Optional second version, the UK GDPR (revised text, Open Government Licence): save
+   https://www.legislation.gov.uk/eur/2016/679/data.htm as `data/raw/uk_gdpr.html`.
+4. Run ingestion:
 
 ```powershell
-uv run ingest
+uv run ingest                              # plain Python
+uv run --group spark spark-ingest          # same output built as PySpark stages (needs Java 17+)
 ```
 
 This writes `data/processed/documents.parquet` (one row per article / recital) and
-`data/processed/chunks.parquet`.
+`data/processed/chunks.parquet`, tagged with `jurisdiction`, `effective_date` and
+`version`. The PySpark version also cleans, deduplicates and adds `same_text_as` (which
+documents of the other jurisdiction have identical text); its output is checked against
+the plain-Python pipeline on every run. `data/processed/` is committed so CI can run the
+evals without the raw pages.
 
 ## Retrieval eval
 
-`eval/gdpr_golden.jsonl` holds 50 questions labelled with the doc_ids that answer them.
+`eval/gdpr_golden.jsonl` holds 50 EU questions labelled with the doc_ids that answer them;
+`eval/jurisdiction_golden.jsonl` holds 20 more (10 UK-only, 10 EU-vs-UK comparisons).
+Each question is searched within the jurisdiction(s) it names (`scope.py`); a question that
+names none is assumed to be about the EU.
 
 ```powershell
-uv run evaluate
+uv run evaluate                        # the 50 EU questions
+uv run evaluate --set jurisdiction     # the 20 jurisdiction questions
+uv run evaluate --kind article         # metadata filter: articles only
 ```
 
 Compares four retrievers (dense, BM25, hybrid RRF, hybrid + cross-encoder rerank) on
 Recall@k and MRR, and writes per-question results to `data/eval/<retriever>.json`.
 Add `--show-misses` to list the questions each retriever ranks wrong.
+
+Original EU-only corpus (articles and recitals), when each stage was added:
 
 | retriever | R@1 | R@3 | R@5 | R@10 | MRR |
 |---|---|---|---|---|---|
@@ -44,12 +58,16 @@ Add `--show-misses` to list the questions each retriever ranks wrong.
 | hybrid (RRF) | 0.37 | 0.69 | 0.77 | 0.81 | 0.577 |
 | hybrid + rerank (ms-marco-MiniLM-L-6-v2) | 0.47 | 0.80 | 0.84 | 0.86 | 0.670 |
 
+Current corpus (EU + UK), articles only: dense 0.56 / 0.85 / MRR 0.731, hybrid 0.61 /
+0.82 / 0.728, hybrid + rerank 0.81 / 0.88 / 0.878 (R@1 / R@3 / MRR, 50 EU questions).
+
 ## Answering questions
 
 Needs `.env` (copy `.env.example`, add `OPENAI_API_KEY`). Default model: `gpt-5.4-mini`.
 
 ```powershell
 uv run ask "Can I ask a company to delete my data?"
+uv run ask "How does the age of consent differ between the EU and the UK?"
 uv run ask --golden 50     # answer the golden set; writes data/eval/answers.json
 ```
 
@@ -60,7 +78,7 @@ retrieval evidence → route: `auto` / `review` (human) / `abstain`. One retry w
 bigger pool (15) if the grader rejects everything or a claim is unsupported.
 
 ```powershell
-uv run ask --golden 50 --unanswerable   # evaluate, with an LLM judge (gpt-5.4) for correctness
+uv run ask --golden 50 --jurisdiction --unanswerable   # evaluate, with an LLM judge (gpt-5.4) for correctness
 uv run calibrate                        # refit reranker score -> probability (after changing retrieval)
 uv run gate                             # regression gate (retrieval only, offline)
 uv run gate --answers                   # ... plus the full answer evaluation
@@ -69,10 +87,11 @@ uv run gate --update                    # accept current numbers as the new base
 
 Baseline (saved in `eval/baseline.json`; answer metrics vary a few points run to run):
 
-| Retrieval (articles only, rerank) | R@1 0.81 | R@3 0.88 | MRR 0.878 |
-|---|---|---|---|
-| **Answers (50 questions)** | cites labelled doc 94% | claims supported 99% | judged correct 80% |
-| **Unanswerable (10)** | abstained 10/10 | auto-answered 0 | |
+| | Retrieval R@1 / R@3 / MRR | Cites labelled doc(s) | Claims supported | Judged correct |
+|---|---|---|---|---|
+| **50 EU questions** | 0.81 / 0.88 / 0.878 | 94% | 97% | 76% |
+| **20 jurisdiction questions** | 0.525 / 0.925 / 0.804 | 95% (all of them) | 98% | 90% |
+| **12 unanswerable** | – | – | – | abstained 10, review 2, auto-answered 0 |
 
 Known limits: confidence separates answerable from unanswerable questions well but
 does not predict correctness (AUC 0.41 on 50 questions); the golden set favours
@@ -91,4 +110,6 @@ uv run pytest
 3. Hybrid retrieval (BM25 + dense, RRF) and cross-encoder reranking
 4. Generator and fact-checker agents with Beta-posterior confidence
 5. Grader, abstain / human review, calibrated confidence, LLM judge, regression gate, GitHub Actions workflow (written, not yet run on GitHub)
-6. Not started: PySpark ingestion, multiple documents and versions, Docker, Terraform, Azure AI Foundry, Confluence
+6. Second version of the law (UK GDPR): jurisdiction / effective date / version metadata, metadata-filtered and jurisdiction-aware retrieval and answers
+7. PySpark ingestion (clean, tag, dedupe, link identical text across jurisdictions, chunk), output checked against the plain-Python pipeline
+8. Not started: chunk-size and prompt tuning, Docker, Terraform, Azure AI Foundry, Confluence; no corpus beyond two related documents

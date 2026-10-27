@@ -1,0 +1,20 @@
+{"id": "j01", "question": "In the UK, how old must a child be to consent to an online service on their own?", "relevant": ["ukgdpr-art8"], "scope": ["UK"]}
+{"id": "j02", "question": "What is the maximum fine under the UK GDPR for the most serious infringements?", "relevant": ["ukgdpr-art83"], "scope": ["UK"]}
+{"id": "j03", "question": "Does a company outside the UK need to appoint a representative in the United Kingdom?", "relevant": ["ukgdpr-art27"], "scope": ["UK"]}
+{"id": "j04", "question": "Under UK law, who decides which countries personal data can be transferred to on the basis of adequate protection?", "relevant": ["ukgdpr-art45A"], "scope": ["UK"]}
+{"id": "j05", "question": "What is a recognised legitimate interest under the UK GDPR?", "relevant": ["ukgdpr-art6"], "scope": ["UK"]}
+{"id": "j06", "question": "When can a UK organisation make solely automated decisions based on special category data?", "relevant": ["ukgdpr-art22B"], "scope": ["UK"]}
+{"id": "j07", "question": "What safeguards must a UK controller provide for significant automated decisions about people?", "relevant": ["ukgdpr-art22C"], "scope": ["UK"]}
+{"id": "j08", "question": "How does UK law decide whether using data for a new purpose is compatible with the original purpose?", "relevant": ["ukgdpr-art8A"], "scope": ["UK"]}
+{"id": "j09", "question": "Under the UK GDPR, how long does a controller have to respond to a data request and when can the time be extended?", "relevant": ["ukgdpr-art12A"], "scope": ["UK"]}
+{"id": "j10", "question": "Can the UK government make rules requiring age verification for children's online consent?", "relevant": ["ukgdpr-art8ZA"], "scope": ["UK"]}
+{"id": "c01", "question": "How does the age of consent for children online differ between the EU GDPR and the UK GDPR?", "relevant": ["gdpr-art8", "ukgdpr-art8"], "scope": ["EU", "UK"]}
+{"id": "c02", "question": "Compare the maximum administrative fines in the EU GDPR and the UK GDPR.", "relevant": ["gdpr-art83", "ukgdpr-art83"], "scope": ["EU", "UK"]}
+{"id": "c03", "question": "Where must a company based outside the territory appoint a representative under the EU and UK versions?", "relevant": ["gdpr-art27", "ukgdpr-art27"], "scope": ["EU", "UK"]}
+{"id": "c04", "question": "How do the EU and UK rules on automated decision-making differ?", "relevant": ["gdpr-art22", "ukgdpr-art22B"], "scope": ["EU", "UK"]}
+{"id": "c05", "question": "Are the legal bases for processing personal data the same in the EU and the UK?", "relevant": ["gdpr-art6", "ukgdpr-art6"], "scope": ["EU", "UK"]}
+{"id": "c06", "question": "How does the territorial scope of the GDPR differ in the EU and the UK?", "relevant": ["gdpr-art3", "ukgdpr-art3"], "scope": ["EU", "UK"]}
+{"id": "c07", "question": "How do the EU and the UK differ on approving transfers of data to countries with adequate protection?", "relevant": ["gdpr-art45", "ukgdpr-art45A"], "scope": ["EU", "UK"]}
+{"id": "c08", "question": "Is the deadline for notifying a personal data breach to the regulator the same in the EU and the UK?", "relevant": ["gdpr-art33", "ukgdpr-art33"], "scope": ["EU", "UK"]}
+{"id": "c09", "question": "Do the EU and the UK require a data protection officer in the same situations?", "relevant": ["gdpr-art37", "ukgdpr-art37"], "scope": ["EU", "UK"]}
+{"id": "c10", "question": "Is the right to lodge a complaint with a regulator found in both the EU GDPR and the UK GDPR text?", "relevant": ["gdpr-art77"], "scope": ["EU", "UK"]}

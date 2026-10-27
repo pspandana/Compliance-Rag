@@ -12,6 +12,7 @@
 Usage:
   uv run ask "Can I ask a company to delete my data?"
   uv run ask --golden 50        # answer the golden set and score it
+  uv run ask --jurisdiction     # UK-only questions and EU-vs-UK comparisons
   uv run ask --unanswerable     # questions the GDPR cannot answer (should abstain / escalate)
 """
 
@@ -28,11 +29,17 @@ from compliance_rag.confidence import (
     retrieval_probability,
     route,
 )
-from compliance_rag.evaluate import load_golden, load_unanswerable
+from compliance_rag.evaluate import (
+    GOLDEN_PATH,
+    JURISDICTION_PATH,
+    load_golden,
+    load_unanswerable,
+)
 from compliance_rag.grader import Grader
 from compliance_rag.ingest import PROJECT_ROOT
 from compliance_rag.llm import get_chat_model
 from compliance_rag.retrieval import build_retrievers
+from compliance_rag.scope import Scope, scoped_search
 
 RESULTS_DIR = PROJECT_ROOT / "data" / "eval"
 POOL = 8  # chunks retrieved before grading
@@ -62,9 +69,14 @@ class FactCheck(BaseModel):
 
 
 GENERATOR_PROMPT = """You answer questions about the GDPR using ONLY the passages below.
-Each passage starts with its id in square brackets.
+Each passage starts with its id in square brackets, then the text it comes from
+(GDPR = the EU regulation, UK GDPR = the UK version).
+This question is about: {scope}.
 
 - Write a short, plain-English answer that a non-lawyer can understand.
+- Say which version (EU or UK) each statement applies to. If passages from both are
+  given and they differ on a point, state the difference; if they agree, say they agree.
+  Never attribute a rule to a version whose passages do not contain it.
 - Then list every factual statement in your answer as a separate claim, citing the
   ids of the passages that support it.
 - Do not use outside knowledge. If the passages do not answer the question, say so
@@ -84,6 +96,8 @@ CHECKER_PROMPT = """You are a strict fact-checker for answers about the GDPR.
 For each numbered claim, decide whether the passages it cites support it.
 A claim is supported only if the cited passages state it or directly imply it.
 Anything added, exaggerated, or not found in the cited passages is unsupported.
+A claim that attributes a rule to the EU or UK version when the cited passage comes
+from the other version is unsupported.
 
 Passages:
 {context}
@@ -93,11 +107,12 @@ Claims:
 
 
 def format_context(chunks: list[dict]) -> str:
-    return "\n\n".join(f"[{c['chunk_id']}] {c['title']}\n{c['text']}" for c in chunks)
+    return "\n\n".join(f"[{c['chunk_id']}] {c['source']}: {c['title']}\n{c['text']}" for c in chunks)
 
 
 @dataclass
 class Attempt:
+    scope: Scope
     pool: list[dict]  # everything retrieved, best first
     kept: list[dict]  # what the grader let through (the generator's context)
     draft: Draft
@@ -113,7 +128,8 @@ class Attempt:
 
 class AnswerPipeline:
     def __init__(self, kind: str | None = "article", use_grader: bool = True):
-        self.retriever = build_retrievers(["rerank"], kind=kind)["rerank"]
+        self.kind = kind
+        self.retriever = build_retrievers(["rerank"])["rerank"]
         llm = get_chat_model()
         self.grader = Grader(llm) if use_grader else None
         self.generator = llm.with_structured_output(Draft)
@@ -121,13 +137,13 @@ class AnswerPipeline:
         self.calibration = load_calibration()
 
     def attempt(self, question: str, pool_size: int, feedback: str = "") -> Attempt:
-        hits = self.retriever.search(question, pool_size)
+        hits, scope = scoped_search(self.retriever, question, pool_size, self.kind)
         pool = [c for c, _ in hits]
         if self.grader:
             grades = self.grader.grade(question, pool)
         else:
             grades = {c["chunk_id"]: True for c in pool}
-        kept = [c for c in pool if grades[c["chunk_id"]]][:MAX_CONTEXT]
+        kept = [c for c in pool if grades[c["chunk_id"]]][: MAX_CONTEXT * len(scope.jurisdictions)]
         retrieval_p = retrieval_probability(hits[0][1], *self.calibration)
 
         # Grader agreement is judged on the three chunks the retriever ranked highest.
@@ -136,16 +152,17 @@ class AnswerPipeline:
 
         if not kept:
             conf = beta_confidence(0, 0, **evidence)
-            return Attempt(pool, kept, Draft(answer="", claims=[]), [], conf, "abstain", retrieval_p)
+            return Attempt(scope, pool, kept, Draft(answer="", claims=[]), [], conf, "abstain", retrieval_p)
 
         context = format_context(kept)
         draft = self.generator.invoke(
-            GENERATOR_PROMPT.format(context=context, question=question, feedback=feedback)
+            GENERATOR_PROMPT.format(scope=scope.label, context=context, question=question, feedback=feedback)
         )
         verdicts = self.check(draft, kept, context)
         supported = sum(v.supported for v in verdicts)
         conf = beta_confidence(supported, len(verdicts) - supported, **evidence)
-        return Attempt(pool, kept, draft, verdicts, conf, route(conf, len(draft.claims), len(kept)), retrieval_p)
+        decision = route(conf, len(draft.claims), len(kept))
+        return Attempt(scope, pool, kept, draft, verdicts, conf, decision, retrieval_p)
 
     def check(self, draft: Draft, chunks: list[dict], context: str) -> list[Verdict]:
         if not draft.claims:
@@ -188,7 +205,8 @@ def best(attempts: list[Attempt]) -> Attempt:
 def print_result(question: str, attempts: list[Attempt]) -> None:
     final = best(attempts)
     conf = final.confidence
-    print(f"\nQuestion: {question}\n")
+    print(f"\nQuestion: {question}")
+    print(f"Scope: {final.scope.label}\n")
     print(f"Answer: {final.answer}\n")
     for claim, v in zip(final.draft.claims, final.verdicts, strict=True):
         mark = "[supported]  " if v.supported else "[UNSUPPORTED]"
@@ -218,9 +236,9 @@ def mean(values) -> float:
     return sum(values) / len(values) if values else float("nan")
 
 
-def run_golden(pipeline: AnswerPipeline, judge, n: int) -> dict:
+def run_golden(pipeline: AnswerPipeline, judge, n: int, path=GOLDEN_PATH, name: str = "answers.json") -> dict:
     rows = []
-    for q in load_golden()[:n]:
+    for q in load_golden(path)[:n]:
         attempts = pipeline.ask(q["question"])
         final = best(attempts)
         first = attempts[0]
@@ -232,7 +250,9 @@ def run_golden(pipeline: AnswerPipeline, judge, n: int) -> dict:
             "relevant": q["relevant"],
             "answer": final.answer,
             "route": final.route,
+            "scope": final.scope.jurisdictions,
             "cites_relevant": bool(cited_docs & set(q["relevant"])),
+            "cites_all_relevant": set(q["relevant"]) <= cited_docs,
             "pool_has_relevant": any(c["doc_id"] in q["relevant"] for c in first.pool),
             "kept_has_relevant": any(c["doc_id"] in q["relevant"] for c in first.kept),
             "irrelevant_before": irrelevant_share(first.pool[:5], q["relevant"]),
@@ -248,8 +268,8 @@ def run_golden(pipeline: AnswerPipeline, judge, n: int) -> dict:
         print(f"{r['id']}  {r['route']:<7} conf {r['confidence']:.2f}  {r['correctness']:<9} {r['question']}")
 
     summary = summarize_golden(rows)
-    print(f"\n{len(rows)} answerable questions")
-    print(f"  cites the labelled article   {summary['cites_relevant']:.0%}")
+    print(f"\n{len(rows)} answerable questions ({path.name})")
+    print(f"  cites the labelled article   {summary['cites_relevant']:.0%}  (all labelled: {summary['cites_all_relevant']:.0%})")
     print(f"  claims supported             {summary['supported_rate']:.0%}")
     print(f"  judged correct               {summary['correct']:.0%}  (partial {summary['partial']:.0%})")
     print(f"  routing                      auto {summary['auto']:.0%}, review {summary['review']:.0%}, abstain {summary['abstain']:.0%}")
@@ -258,7 +278,7 @@ def run_golden(pipeline: AnswerPipeline, judge, n: int) -> dict:
     print(f"  irrelevant context           {summary['irrelevant_before']:.0%} before grader -> {summary['irrelevant_after']:.0%} after")
     print(f"  grader kept a labelled doc   {summary['grader_recall']:.0%} of the questions where the pool had one")
     print(f"  needed a retry               {sum(r['attempts'] > 1 for r in rows)}")
-    save("answers.json", rows)
+    save(name, rows)
     return summary
 
 
@@ -274,6 +294,7 @@ def summarize_golden(rows: list[dict]) -> dict:
     in_pool = [r for r in rows if r["pool_has_relevant"]]
     return {
         "cites_relevant": sum(r["cites_relevant"] for r in rows) / n,
+        "cites_all_relevant": sum(r["cites_all_relevant"] for r in rows) / n,
         "supported_rate": sum(r["supported"] for r in rows) / max(claims, 1),
         "correct": share(rows, "correctness", "correct"),
         "partial": share(rows, "correctness", "partial"),
@@ -330,13 +351,14 @@ def main() -> None:
     parser.add_argument("question", nargs="?")
     parser.add_argument("--golden", type=int, metavar="N", help="answer the first N golden-set questions")
     parser.add_argument("--unanswerable", action="store_true", help="run the questions the GDPR cannot answer")
+    parser.add_argument("--jurisdiction", action="store_true", help="run the UK-only and EU-vs-UK questions")
     parser.add_argument("--kind", choices=["article", "recital", "any"], default="article",
                         help="metadata filter for retrieval (default: article)")
     parser.add_argument("--no-grader", action="store_true", help="skip the grader (ablation)")
     parser.add_argument("--no-judge", action="store_true", help="skip the LLM correctness judge")
     args = parser.parse_args()
-    if not (args.question or args.golden or args.unanswerable):
-        parser.error("give a question, --golden N or --unanswerable")
+    if not (args.question or args.golden or args.unanswerable or args.jurisdiction):
+        parser.error("give a question, --golden N, --jurisdiction or --unanswerable")
 
     pipeline = AnswerPipeline(kind=None if args.kind == "any" else args.kind, use_grader=not args.no_grader)
     if args.question:
@@ -350,6 +372,8 @@ def main() -> None:
         judge = Judge()
     if args.golden:
         run_golden(pipeline, judge, args.golden)
+    if args.jurisdiction:
+        run_golden(pipeline, judge, 1000, JURISDICTION_PATH, "jurisdiction_answers.json")
     if args.unanswerable:
         run_unanswerable(pipeline, judge)
 

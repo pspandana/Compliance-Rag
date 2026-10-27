@@ -39,7 +39,9 @@ make things up.
 | 3 | Make the search smarter (keyword search, combining, reranking) | ✅ Done |
 | 4 | Add the AI that writes answers and the AI that checks them | ✅ Done |
 | 5 | Grader agent, abstain / human review, fuller confidence score, article filter, LLM judge, regression gate, GitHub Actions file | ✅ Done (the GitHub part is untested until the repo is pushed) |
-| 6 | Optional extras (PySpark, many documents with versions, Docker, Terraform, Azure AI Foundry, Confluence) | Not started |
+| 6 | Second version of the law (UK GDPR): metadata, jurisdiction-aware search and answers | ✅ Done |
+| 7 | Ingestion rebuilt in PySpark (clean, tag, dedupe, link, chunk) | ✅ Done (small data, local mode) |
+| 8 | Not started: chunk/prompt tuning, Docker, Terraform, Azure AI Foundry, Confluence | Not started |
 
 ---
 
@@ -73,8 +75,10 @@ in later phases.
 ```
 compliance-rag/
 ├── src/compliance_rag/     ← the actual code
-│   ├── ingest.py           ← Phase 1: reads the GDPR and cuts it into pieces
-│   ├── retrieval.py        ← Phases 2-3: the search methods
+│   ├── ingest.py           ← Phases 1, 6: reads the EU and UK GDPR, cuts them into pieces
+│   ├── ingest_spark.py     ← Phase 7: the same job as Spark stages
+│   ├── scope.py            ← Phase 6: decides EU, UK or both for a question
+│   ├── retrieval.py        ← Phases 2-3, 6: the search methods and metadata filters
 │   ├── evaluate.py         ← Phases 2-3: scores the search
 │   ├── llm.py              ← Phase 4: connects to OpenAI
 │   ├── answer.py           ← Phases 4-5: the full pipeline and its evaluation
@@ -87,7 +91,8 @@ compliance-rag/
 ├── .github/workflows/ci.yml ← Phase 5: GitHub runs lint, tests and the gate
 ├── eval/
 │   ├── gdpr_golden.jsonl   ← the 50 test questions with correct answers
-│   ├── gdpr_unanswerable.jsonl ← 10 questions the GDPR cannot answer
+│   ├── jurisdiction_golden.jsonl ← 20 UK-only and EU-vs-UK questions
+│   ├── gdpr_unanswerable.jsonl ← 12 questions the GDPR cannot answer
 │   ├── calibration.json    ← the fitted score-to-probability curve
 │   └── baseline.json       ← the numbers the gate compares against
 ├── data/
@@ -806,22 +811,213 @@ generator, verifier, judge) are checked by the evaluation runs, not by unit test
 
 ---
 
+## 11. Phase 6: A second version of the law (the UK GDPR)
+
+So far we had one document. Real compliance questions often involve **several
+versions of the same rules**, and the versions disagree. After Brexit the UK copied
+the GDPR into its own law and has been changing it since. We added that copy so the
+system has to answer: *which version are you asking about?*
+
+### Step 1: Get the UK text
+
+Source: https://www.legislation.gov.uk/eur/2016/679/data.htm (the whole document in
+one page; free to reuse under the Open Government Licence). Saved as
+`data/raw/uk_gdpr.html`. This is the **latest revised text**, including changes made
+by the Data (Use and Access) Act 2025, retrieved on 2026-10-26.
+
+### Step 2: Read it (a second parser)
+
+The UK page looks nothing like the EU one, so `ingest.py` has a second parser,
+`parse_uk_gdpr_html`. The page is full of **amendment markup** that must be stripped
+or it pollutes the text and the search:
+
+- little footnote markers like `F57`,
+- square brackets `[ ]` around changed words,
+- a "U.K." label on every heading,
+- repealed paragraphs, which appear as `...`.
+
+Facts about the UK text, found by reading it rather than assuming:
+
+| | EU GDPR | UK GDPR |
+|---|---|---|
+| Articles in our data | 99 | 82 (some UK-only, like 22A–22D, 45A–45C, 84A–84D) |
+| Recitals | 173 | **none** (the UK version doesn't include them) |
+| Missing UK articles | – | 38 article numbers are repealed there, e.g. 22, 44, 45, 53–56, 59–77, 81, 87–93, 97–99 |
+
+The repealed ones matter. For example **Article 77, the right to complain to the
+regulator, is not in the UK GDPR text**: the UK moved it to the Data Protection Act
+2018, which we don't have. So the system can't answer UK complaint questions, and
+it should say so.
+
+### Step 3: Tag every piece of text
+
+Each document and chunk now carries extra **metadata**:
+
+| Field | Example |
+|---|---|
+| `jurisdiction` | `EU` or `UK` |
+| `effective_date` | `2018-05-25` (EU: when it started to apply) or `2020-12-31` (UK: end of the Brexit transition) |
+| `version` | `Regulation (EU) 2016/679, OJ L 119, 4.5.2016` or `UK GDPR, latest revised text ... (retrieved 2026-10-26)` |
+
+Be clear about what "version" means here: **two jurisdictions' versions**, not a
+history of one text changing over time. We do not have dated revisions of the same
+article.
+
+### Step 4: Search the right version (filters)
+
+The search can now filter on any tag (`kind`, `jurisdiction`) **before** ranking, so
+chunks from the wrong version can never take a result slot. One shared index serves
+every filter (`retrieval.py`).
+
+Which version to use is decided by `scope.py`, with plain rules and no AI:
+
+| The question... | Searches | Example |
+|---|---|---|
+| mentions the UK only | UK GDPR | "What is the maximum fine in the UK?" |
+| mentions the EU only | EU GDPR | "...outside the EU..." |
+| mentions both, or asks to compare/differ | both (half the results from each) | "How does the consent age differ between the EU and UK?" |
+| mentions neither | **EU, and the answer says it assumed so** | "Can I ask a company to delete my data?" |
+
+The writer is told which version each passage comes from, must say which version
+each statement applies to, must state differences when the two disagree and say
+when they agree, and the fact-checker rejects claims credited to the wrong version.
+
+### Step 5: New test questions
+
+`eval/jurisdiction_golden.jsonl` has 20 questions I wrote after reading the UK text:
+
+- **10 UK-only**, e.g. the UK age of consent (13, against 16 in the EU text), UK
+  fines (£17.5 million, against €20 million), "recognised legitimate interests"
+  (new in the UK), and the UK's split-up automated decision rules.
+- **10 comparisons**, e.g. consent age and fines, and also **"are they the same?"**
+  cases (breach deadline, data protection officer rules), which check the system
+  doesn't invent differences. One (complaints) is deliberately a case where the UK
+  text is silent.
+
+We also added 2 more unanswerable questions (about the UK Data Protection Act 2018
+and which EU countries lowered the consent age) because related text exists but
+doesn't answer them.
+
+### Results
+
+Search (articles only, with the reranker):
+
+| | R@1 | R@3 | MRR |
+|---|---|---|---|
+| 50 original EU questions (unchanged by adding the UK) | 0.81 | 0.88 | 0.878 |
+| 20 jurisdiction questions | 0.525 | 0.925 | 0.804 |
+
+R@1 is lower on the 20 only because 10 of them have **two** correct answers (one per
+version), so at most half are in position 1. The right articles are in the top 3 for
+92.5%.
+
+Answers (the saved baseline; AI answers vary a few points run to run):
+
+| | 50 original | 20 jurisdiction | 12 unanswerable |
+|---|---|---|---|
+| Cites the labelled article(s) | 94% | 95% (all of them) | – |
+| Claims supported by the text | 97% | 98% | – |
+| Judged correct | 76% | 90% | – |
+| Abstained / sent to review / answered automatically | – | – | 10 / 2 / **0** |
+
+### What went wrong (honest notes)
+
+- **A "boilerplate" article crowds the results.** UK Article 91A ("Regulations made by
+  the Secretary of State") scores high for almost any UK-flavoured question because
+  it is full of UK and regulation vocabulary. It often takes the top spot, pushing
+  the right article to second. We left it visible rather than patching around it.
+- **The "are the legal bases the same?" question (c05) failed.** An abstract
+  question like that matches no article well, the grader found nothing relevant, and
+  the system abstained. That is safe but wrong, and the judge marks it incorrect.
+- **Correctness on the 50 original questions dipped from 80% to 76%.** That is within
+  the run-to-run variation we have seen, and the corpus and prompts also changed, so
+  we can't say why. We did not tune to bring it back.
+- **Unanswerable questions about nearby law went to review, not abstain.** The text
+  looked related enough to produce a cautious answer. None were answered
+  automatically.
+- **The confidence score still doesn't predict correctness** (see Phase 5).
+
+---
+
+## 12. Phase 7: Rebuilding ingestion in PySpark
+
+Apache Spark is a tool for processing large amounts of data in parallel; **PySpark**
+is its Python interface. The pipeline in `ingest_spark.py` does the same job as
+`ingest.py`, as Spark stages:
+
+| Stage | What it does |
+|---|---|
+| 1. Parse | Read the raw web pages into records (BeautifulSoup, as before) |
+| 2. Clean | Tidy whitespace in text and titles |
+| 3. Tag | Check every record has valid metadata (jurisdiction, a real effective date, a version) and non-empty text; stop if not |
+| 4. Deduplicate | Drop records whose normalised text repeats within the same jurisdiction |
+| 5. Link | For each document, list the other-jurisdiction documents with **word-for-word identical** text (`same_text_as`) |
+| 6. Chunk | Split every document into chunks, in parallel, using the same packing rules |
+
+Run it with:
+
+```powershell
+uv run --group spark spark-ingest
+```
+
+### Results
+
+| | |
+|---|---|
+| Documents in → out | 354 → 354 |
+| Duplicates removed | **0** |
+| Documents identical in the other jurisdiction | 10 (five articles: 7, 11, 16, 19, 20) |
+| Chunks | 576 |
+| Spark time | about 15 seconds |
+| Output vs the plain-Python pipeline | **identical** (checked automatically on every run) |
+
+### Be honest about what this shows
+
+- **It's a working pipeline, not a demonstration of scale.** 354 documents is tiny;
+  plain Python does the same in a second. Spark runs on one laptop ("local mode").
+  The value is that the pipeline is structured to scale, not that we proved it.
+- **Deduplication found nothing real**, because nothing repeats in these two
+  documents. The duplicate-removal code is proven only by a unit test that plants a
+  duplicate on purpose.
+- **The "link" stage found something useful:** five articles didn't change between
+  the EU and UK. For those, a comparison answer should say "the same".
+- It adds two columns to the data (`text_hash` on documents and `same_text_as` on
+  both); nothing downstream needed to change. Retrieval scores were identical before
+  and after.
+
+### Setting up Java (needed by Spark)
+
+Spark runs on Java. The normal Windows installer needs an administrator pop-up that a
+background session can't click, so we used the **portable** version instead: a zip
+of Temurin JDK 17 from the official release, **checked against its published
+checksum** (the first download was cut off, the check caught it, and we downloaded
+again), unzipped into `%LOCALAPPDATA%\compliance-rag\jdk17`. Nothing was installed
+system-wide. The pipeline finds Java there automatically; if you have Java elsewhere,
+set `JAVA_HOME`.
+
+PySpark is an **optional** package group, so people (and GitHub) who don't need Spark
+don't have to install it. The Spark unit tests are skipped when it's missing.
+
+---
+
 ## What this project does and doesn't show
 
-It is a working, measured, single-document prototype of the pattern
-*retrieve → grade → generate → verify → decide*. **Not built:**
+It is a working, measured prototype of the pattern
+*retrieve → grade → generate → verify → decide*, over **two jurisdictions' versions**
+of one regulation, with a Spark ingestion pipeline. **Not built:**
 
-- many documents, document versions or effective dates (we have only the GDPR);
-- PySpark ingestion, deduplication (the cleaning uses BeautifulSoup);
+- dozens or hundreds of documents, or dated revisions of the same text (we have two
+  related documents, so "200 documents" would be untrue);
 - Azure AI Foundry evaluations, Docker, Terraform, Confluence;
-- tuning of chunk size and prompts (only search methods were tuned).
+- tuning of chunk size and prompts (only search methods were tuned);
+- scale: Spark was run on a laptop with a few hundred documents.
 
 Only quote numbers this project measured: the tables above, not figures from
 elsewhere.
 
 ---
 
-## 11. Saving our work with Git
+## 13. Saving our work with Git
 
 Git keeps **save points** (called **commits**) of the project.
 
@@ -830,8 +1026,9 @@ Git keeps **save points** (called **commits**) of the project.
 - **GitHub** is an optional online copy. We can connect it later, and all the
   save points go up with it.
 - Some things are deliberately **not** saved (listed in `.gitignore`): the
-  `.venv` folder, the `data/` folder (it can be rebuilt with `uv run ingest`), and
-  `.env` (your secret keys).
+  `.venv` folder, the downloaded web pages in `data/raw/`, the results in
+  `data/eval/`, and `.env` (your secret keys). The cleaned text in `data/processed/`
+  **is** saved (about 300 KB of public law), so GitHub can run the checks.
 
 Save points so far:
 
@@ -842,6 +1039,7 @@ Save points so far:
 5. `Phase 4: generator, fact-checker, Beta confidence and self-correction`
 6. `Stop tracking generated eval results`
 7. `Phase 5: grader, abstain/review routing, calibrated confidence, judge, gate, CI`
+8. `Phase 6-7: UK GDPR as a second version, jurisdiction scoping, PySpark ingestion`
 
 Useful commands:
 
@@ -852,7 +1050,7 @@ git status            # see what changed since the last save point
 
 ---
 
-## 12. Glossary
+## 14. Glossary
 
 | Term | Meaning |
 |---|---|
@@ -889,6 +1087,17 @@ git status            # see what changed since the last save point
 | **Regression gate** | A check that fails when quality drops below a saved baseline |
 | **CI (continuous integration)** | A server that runs your checks automatically on every change |
 | **AUC** | How well a score separates two groups: 1.0 perfectly, 0.5 no better than a coin flip |
+| **Jurisdiction** | Which legal system a text belongs to (here EU or UK) |
+| **UK GDPR** | The UK's own copy of the GDPR, kept in UK law after Brexit and amended since |
+| **Recital vs repealed** | A recital is background text; a repealed article has been removed from the law |
+| **Amendment markup** | The footnote markers and brackets that law websites add to show what changed |
+| **Metadata** | Facts about a piece of text (its jurisdiction, date, version), not its content |
+| **Spark / PySpark** | A tool for processing data in parallel, and its Python interface |
+| **Local mode** | Running Spark on one computer instead of a cluster |
+| **Deduplication** | Removing records whose content repeats |
+| **Parity check** | Confirming a new pipeline produces exactly the same output as the old one |
+| **JDK** | Java Development Kit, the Java software Spark runs on |
+| **Checksum (SHA-256)** | A fingerprint of a file, used to confirm a download is complete and untampered |
 | **Golden set** | Questions with known correct answers, used to grade the system |
 | **Baseline** | The first simple version, which later versions must beat |
 | **Recall@k** | Share of questions where the right answer is in the top k results |

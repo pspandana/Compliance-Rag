@@ -1,4 +1,9 @@
-from compliance_rag.ingest import Document, chunk_document, parse_gdpr_html
+﻿from compliance_rag.ingest import (
+    Document,
+    chunk_document,
+    parse_gdpr_html,
+    parse_uk_gdpr_html,
+)
 
 # Trimmed-down copy of the EUR-Lex markup structure.
 SAMPLE_HTML = """
@@ -44,3 +49,35 @@ def test_chunk_document_keeps_paragraphs_whole():
     assert [c.chunk_id for c in chunks] == ["gdpr-art1-c0", "gdpr-art1-c1"]
     assert chunks[0].text == "\n".join(paras[:2])
     assert all(c.doc_id == "gdpr-art1" for c in chunks)
+
+
+# Trimmed-down copy of the legislation.gov.uk markup: amendment links, change brackets,
+# an extent label, a repealed paragraph, the amendment notes, and a fully repealed article.
+UK_SAMPLE_HTML = """
+<html><body>
+<a class="LegAnchorID" id="section-Article-8"></a>
+<h3 class="LegClearFix LegP1Container"><span class="LegDS LegP1No">Article 8<span class="LegExtentRestriction">U.K.</span></span><span class="LegDS LegP1GroupTitle">Child's consent</span></h3>
+<p class="LegClearFix LegP2Container"><span class="LegDS LegLHS LegP2No">1.</span><span class="LegDS LegRHS LegP2Text">the child is at least <span class="LegChangeDelimiter">[</span><a class="LegCommentaryLink">F57</a><span class="LegSubstitution">13 years old</span><span class="LegChangeDelimiter">]</span>.</span></p>
+<p class="LegRHS LegP2Text"><a class="LegCommentaryLink">F59</a>...</p>
+<div class="LegAnnotations">Textual Amendments F57 Words substituted</div>
+<a class="LegAnchorID" id="section-Article-9"></a>
+<h3 class="LegClearFix LegP1Container"><span class="LegDS LegP1No">Article 9</span><span class="LegDS LegP1GroupTitle">Repealed</span></h3>
+<p class="LegRHS LegP1Text"><a class="LegCommentaryLink">F60</a> . . . . .</p>
+</body></html>
+"""
+
+
+def test_parse_uk_gdpr_html_strips_amendment_markup_and_skips_repealed():
+    docs = parse_uk_gdpr_html(UK_SAMPLE_HTML)
+
+    assert [d.doc_id for d in docs] == ["ukgdpr-art8"]
+    doc = docs[0]
+    assert doc.title == "Article 8 - Child's consent"
+    assert doc.text == "1. the child is at least 13 years old."
+    assert (doc.source, doc.jurisdiction, doc.kind) == ("UK GDPR", "UK", "article")
+
+
+def test_chunks_carry_document_metadata():
+    doc = parse_uk_gdpr_html(UK_SAMPLE_HTML)[0]
+    chunk = chunk_document(doc)[0]
+    assert (chunk.jurisdiction, chunk.effective_date) == ("UK", doc.effective_date)

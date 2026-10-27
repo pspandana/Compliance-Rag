@@ -9,8 +9,14 @@ import argparse
 import json
 
 from compliance_rag.confidence import CALIBRATION_PATH, fit_platt, retrieval_probability
-from compliance_rag.evaluate import load_golden, load_unanswerable, rank_docs
+from compliance_rag.evaluate import (
+    JURISDICTION_PATH,
+    load_golden,
+    load_unanswerable,
+    rank_docs,
+)
 from compliance_rag.retrieval import build_retrievers
+from compliance_rag.scope import scoped_search
 
 
 def main() -> None:
@@ -18,15 +24,16 @@ def main() -> None:
     parser.add_argument("--kind", choices=["article", "recital"], help="only search this kind of document")
     args = parser.parse_args()
 
-    retriever = build_retrievers(["rerank"], kind=args.kind)["rerank"]
+    retriever = build_retrievers(["rerank"])["rerank"]
     scores, labels = [], []
-    for q in load_golden():
-        hits = retriever.search(q["question"], 50)
+    for q in load_golden() + load_golden(JURISDICTION_PATH):
+        hits, _ = scoped_search(retriever, q["question"], 50, args.kind)
         top3 = rank_docs([c["doc_id"] for c, _ in hits])[:3]
         scores.append(hits[0][1])
         labels.append(int(bool(set(top3) & set(q["relevant"]))))
     for q in load_unanswerable():
-        scores.append(retriever.search(q["question"], 50)[0][1])
+        hits, _ = scoped_search(retriever, q["question"], 50, args.kind)
+        scores.append(hits[0][1])
         labels.append(0)
 
     a, b = fit_platt(scores, labels)
