@@ -24,4 +24,5 @@ def get_chat_model(model: str | None = None):
         raise SystemExit("OPENAI_API_KEY is not set. Copy .env.example to .env and add your key.")
     from langchain_openai import ChatOpenAI
 
-    return ChatOpenAI(model=model or os.getenv("OPENAI_MODEL", DEFAULT_OPENAI_MODEL))
+    # Long evaluation runs make hundreds of calls; retry (with backoff) through brief network blips.
+    return ChatOpenAI(model=model or os.getenv("OPENAI_MODEL", DEFAULT_OPENAI_MODEL), max_retries=8)

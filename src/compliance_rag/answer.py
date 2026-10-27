@@ -58,6 +58,12 @@ class Draft(BaseModel):
     claims: list[Claim] = Field(description="Every factual statement in the answer, one per item")
 
 
+class DraftComplete(Draft):
+    """Same as Draft, but the answer length is not capped at a few sentences."""
+
+    answer: str = Field(description="Plain-English answer to the question, as long as needed to be complete")
+
+
 class Verdict(BaseModel):
     claim_number: int
     supported: bool
@@ -86,6 +92,27 @@ Passages:
 {context}
 
 Question: {question}"""
+
+_SHORT = "- Write a short, plain-English answer that a non-lawyer can understand.\n"
+_COMPLETE = (
+    "- Write a plain-English answer that a non-lawyer can understand. Be complete: when a passage\n"
+    "  lists conditions, requirements, items, exceptions or time limits that bear on the question,\n"
+    "  include every one of them (briefly), not only the main ones. Use numbers, dates and named\n"
+    "  roles exactly as the passage gives them.\n"
+)
+_RESTRAINED = (
+    "- State only what the passages say: add no background, examples or consequences of your own.\n"
+    "  If the passages cover only part of the question, answer that part and say what is not covered.\n"
+)
+assert _SHORT in GENERATOR_PROMPT
+
+# Generator prompt variants for tuning (see tune_prompts.py): name -> (prompt, answer schema).
+# v0 is the original and the default.
+GENERATOR_VARIANTS = {
+    "v0": (GENERATOR_PROMPT, Draft),
+    "v1": (GENERATOR_PROMPT.replace(_SHORT, _COMPLETE), DraftComplete),
+    "v2": (GENERATOR_PROMPT.replace(_SHORT, _COMPLETE + _RESTRAINED), DraftComplete),
+}
 
 FEEDBACK = """
 A fact-checker rejected these claims from your previous attempt. Fix or drop them:
@@ -127,14 +154,19 @@ class Attempt:
 
 
 class AnswerPipeline:
-    def __init__(self, kind: str | None = "article", use_grader: bool = True):
+    def __init__(self, kind: str | None = "article", use_grader: bool = True, prompt: str = "v0"):
         self.kind = kind
         self.retriever = build_retrievers(["rerank"])["rerank"]
-        llm = get_chat_model()
-        self.grader = Grader(llm) if use_grader else None
-        self.generator = llm.with_structured_output(Draft)
-        self.checker = llm.with_structured_output(FactCheck)
+        self.llm = get_chat_model()
+        self.grader = Grader(self.llm) if use_grader else None
+        self.checker = self.llm.with_structured_output(FactCheck)
         self.calibration = load_calibration()
+        self.set_prompt(prompt)
+
+    def set_prompt(self, name: str) -> None:
+        """Switch the generator prompt variant (see GENERATOR_VARIANTS)."""
+        self.generator_prompt, schema = GENERATOR_VARIANTS[name]
+        self.generator = self.llm.with_structured_output(schema)
 
     def attempt(self, question: str, pool_size: int, feedback: str = "") -> Attempt:
         hits, scope = scoped_search(self.retriever, question, pool_size, self.kind)
@@ -156,7 +188,7 @@ class AnswerPipeline:
 
         context = format_context(kept)
         draft = self.generator.invoke(
-            GENERATOR_PROMPT.format(scope=scope.label, context=context, question=question, feedback=feedback)
+            self.generator_prompt.format(scope=scope.label, context=context, question=question, feedback=feedback)
         )
         verdicts = self.check(draft, kept, context)
         supported = sum(v.supported for v in verdicts)
@@ -354,13 +386,16 @@ def main() -> None:
     parser.add_argument("--jurisdiction", action="store_true", help="run the UK-only and EU-vs-UK questions")
     parser.add_argument("--kind", choices=["article", "recital", "any"], default="article",
                         help="metadata filter for retrieval (default: article)")
+    parser.add_argument("--prompt", choices=list(GENERATOR_VARIANTS), default="v0", help="generator prompt variant")
     parser.add_argument("--no-grader", action="store_true", help="skip the grader (ablation)")
     parser.add_argument("--no-judge", action="store_true", help="skip the LLM correctness judge")
     args = parser.parse_args()
     if not (args.question or args.golden or args.unanswerable or args.jurisdiction):
         parser.error("give a question, --golden N, --jurisdiction or --unanswerable")
 
-    pipeline = AnswerPipeline(kind=None if args.kind == "any" else args.kind, use_grader=not args.no_grader)
+    pipeline = AnswerPipeline(
+        kind=None if args.kind == "any" else args.kind, use_grader=not args.no_grader, prompt=args.prompt
+    )
     if args.question:
         print_result(args.question, pipeline.ask(args.question))
         return

@@ -41,7 +41,8 @@ make things up.
 | 5 | Grader agent, abstain / human review, fuller confidence score, article filter, LLM judge, regression gate, GitHub Actions file | ✅ Done (the GitHub part is untested until the repo is pushed) |
 | 6 | Second version of the law (UK GDPR): metadata, jurisdiction-aware search and answers | ✅ Done |
 | 7 | Ingestion rebuilt in PySpark (clean, tag, dedupe, link, chunk) | ✅ Done (small data, local mode) |
-| 8 | Not started: chunk/prompt tuning, Docker, Terraform, Azure AI Foundry, Confluence | Not started |
+| 8 | Chunk-size and prompt tuning, with a held-out half and a noise measurement | ✅ Done (no change adopted: nothing beat the noise) |
+| 9 | Not started: Docker, Terraform, Azure AI Foundry, Confluence, GitHub run of CI | Not started |
 
 ---
 
@@ -86,6 +87,8 @@ compliance-rag/
 │   ├── confidence.py       ← Phases 4-5: Bayesian confidence and the routing rule
 │   ├── calibrate.py        ← Phase 5: turns reranker scores into probabilities
 │   ├── judge.py            ← Phase 5: LLM judge for answer correctness
+│   ├── tune_chunks.py      ← Phase 8: compares chunk sizes
+│   ├── tune_prompts.py     ← Phase 8: compares prompt variants, with a noise measurement
 │   └── gate.py             ← Phase 5: fails if quality drops below the baseline
 ├── tests/                  ← small checks that the code works
 ├── .github/workflows/ci.yml ← Phase 5: GitHub runs lint, tests and the gate
@@ -1000,6 +1003,104 @@ don't have to install it. The Spark unit tests are skipped when it's missing.
 
 ---
 
+## 13. Phase 8: Tuning chunk size and prompts
+
+"Tuning" means trying settings and keeping the best. With only 70 questions it is easy
+to fool yourself, so the rules were written **before** running anything.
+
+### The safeguards
+
+- **Tune half and holdout half.** The 70 answerable questions (50 EU + 20 jurisdiction)
+  are split by alternating position: 35 to choose a setting on, 35 to confirm it on.
+  A setting that only wins on the questions it was chosen on is probably luck.
+- **A noise measurement.** The AI is not repeatable. We ran the *same* prompt twice;
+  any difference between those runs is pure chance, and a new prompt has to beat that.
+- **A decision rule, fixed in advance** (below), so we can't decide a result is good
+  after seeing it.
+
+### Chunk size (search only, free to run)
+
+Rule: adopt a size other than 1200 only if tune MRR improves by at least 0.02 and
+holdout MRR doesn't drop by more than 0.01.
+
+| Max chunk size (chars) | Chunks | Tune MRR | Holdout MRR |
+|---|---|---|---|
+| 400 | 1223 | 0.780 | 0.879 |
+| 600 | 930 | 0.824 | 0.885 |
+| **800** | 748 | **0.852** | **0.894** |
+| **1200 (current)** | 576 | 0.835 | 0.878 |
+| 1800 | 472 | 0.811 | 0.869 |
+| 2400 | 428 | 0.799 | 0.812 |
+| 4000 | 382 | 0.810 | 0.783 |
+| 8000 | 356 | 0.810 | 0.768 |
+
+**Verdict: keep 1200.** 800 was best (+0.017 tune, +0.015 holdout) but missed the
++0.02 bar, and a gain that small is inside the noise of 35 questions. The clear
+finding is on the other side: **very large chunks hurt**, especially on the holdout
+half, because the embedding model only reads about 2,000 characters and cuts off the
+rest. We only measured search; chunk size also changes how much text the writer sees,
+which we did not test.
+
+Run it: `uv run tune-chunks`.
+
+### Prompts (the generator's instructions; calls the API)
+
+We read why the judge marked answers partial or incorrect. Most partial answers
+**left out items from a list** in the article (e.g. only some of what a processor
+contract must include). Two variants try to fix that:
+
+- **v1 "complete":** include every condition, requirement, exception and time limit
+  in the passages, use numbers exactly as given, and don't cap the answer at a few
+  sentences.
+- **v2 "complete + restrained":** v1, plus "state only what the passages say".
+
+Rule: a variant is adopted only if it beats the current prompt (v0) on **both** halves
+by more than the run-to-run noise, and the share of supported claims doesn't fall by
+more than 3 points.
+
+| Run | Correct: tune | Correct: holdout | All 70 | Partial | Supported claims | Fixed / broke vs v0 |
+|---|---|---|---|---|---|---|
+| v0 (current) | 80.0% | 80.0% | 80.0% | 10.0% | 98.8% | – |
+| v0 again (**noise**) | 71.4% | 85.7% | 78.6% | 14.3% | 98.9% | 3 / 4 |
+| v1 complete | 82.9% | 74.3% | 78.6% | 12.9% | 97.7% | 4 / 5 |
+| v2 complete + restrained | 82.9% | 80.0% | 81.4% | 10.0% | 98.9% | 5 / 4 |
+
+"Fixed / broke" counts questions that became correct / stopped being correct.
+
+**The noise is the main finding.** The *same* prompt run twice gave different verdicts
+on 7 of 70 questions (10%), and a half of 35 questions moved by up to 9 points.
+Against that, v1 and v2 changed things by no more than the noise did. The "be
+complete" instructions did **not** measurably reduce partial answers.
+
+**Verdict: keep the current prompt (v0).** The variants stay in the code
+(`GENERATOR_VARIANTS`, `uv run ask --prompt v1`) so the experiment can be repeated.
+
+Run it: `uv run python -m compliance_rag.tune_prompts v0 v0 v1 v2` (about 20 minutes
+per variant; add `--resume` to reuse finished runs).
+
+### What this means for the rest of the project
+
+- **70 questions can't detect small improvements.** A real 3-5 point gain looks like
+  chance. To tune further we would need several hundred questions, not more prompt
+  tweaks.
+- **The regression gate's tolerance for answer quality may be too tight for the
+  20-question jurisdiction set**, where one question is worth 5 points and identical
+  runs can differ by that much. A failed gate there should be rerun before trusting it.
+- **The remaining partial answers are mostly not a prompt problem.** The judge's reasons
+  point at search: the right article was missing or only part of it reached the writer
+  (long articles are split), or a recital was needed but articles-only search
+  excluded it.
+
+### Two things that went wrong while running this
+
+- A Windows security policy (Application Control) blocked the newly generated
+  `tune-prompts.exe` launcher, and my first attempt's error was hidden, so it looked
+  like it was running. Running the same code with `python -m` worked.
+- A brief network failure killed the second run partway. We added automatic retries
+  for the API calls and a `--resume` option that reuses finished runs.
+
+---
+
 ## What this project does and doesn't show
 
 It is a working, measured prototype of the pattern
@@ -1009,15 +1110,15 @@ of one regulation, with a Spark ingestion pipeline. **Not built:**
 - dozens or hundreds of documents, or dated revisions of the same text (we have two
   related documents, so "200 documents" would be untrue);
 - Azure AI Foundry evaluations, Docker, Terraform, Confluence;
-- tuning of chunk size and prompts (only search methods were tuned);
-- scale: Spark was run on a laptop with a few hundred documents.
+- scale: Spark was run on a laptop with a few hundred documents;
+- a test set big enough to measure small improvements (70 questions; see Phase 8).
 
 Only quote numbers this project measured: the tables above, not figures from
 elsewhere.
 
 ---
 
-## 13. Saving our work with Git
+## 14. Saving our work with Git
 
 Git keeps **save points** (called **commits**) of the project.
 
@@ -1040,6 +1141,7 @@ Save points so far:
 6. `Stop tracking generated eval results`
 7. `Phase 5: grader, abstain/review routing, calibrated confidence, judge, gate, CI`
 8. `Phase 6-7: UK GDPR as a second version, jurisdiction scoping, PySpark ingestion`
+9. `Phase 8: chunk-size and prompt tuning (no change adopted)`
 
 Useful commands:
 
@@ -1050,7 +1152,7 @@ git status            # see what changed since the last save point
 
 ---
 
-## 14. Glossary
+## 15. Glossary
 
 | Term | Meaning |
 |---|---|
@@ -1097,6 +1199,12 @@ git status            # see what changed since the last save point
 | **Deduplication** | Removing records whose content repeats |
 | **Parity check** | Confirming a new pipeline produces exactly the same output as the old one |
 | **JDK** | Java Development Kit, the Java software Spark runs on |
+| **Tuning** | Trying different settings and keeping the one that scores best |
+| **Holdout set** | Questions kept aside, not used to choose a setting, so they can confirm it |
+| **Overfitting** | A setting that looks good only because it was chosen on the same questions it is scored on |
+| **Noise / replicate** | Run-to-run variation; a replicate is the same experiment run again to measure it |
+| **Decision rule** | A pass/fail test written down before an experiment so the result can't be argued afterwards |
+| **Prompt variant** | One version of the instructions given to the AI |
 | **Checksum (SHA-256)** | A fingerprint of a file, used to confirm a download is complete and untampered |
 | **Golden set** | Questions with known correct answers, used to grade the system |
 | **Baseline** | The first simple version, which later versions must beat |

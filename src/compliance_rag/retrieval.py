@@ -147,9 +147,9 @@ class RerankRetriever:
 RETRIEVERS = ("dense", "bm25", "hybrid", "rerank")
 
 
-def build_retrievers(names: list[str]) -> dict:
-    """Build the named retrievers, sharing the models between them."""
-    chunks = load_chunks()
+def build_retrievers(names: list[str], chunks: list[dict] | None = None) -> dict:
+    """Build the named retrievers, sharing the models between them (chunks default to the saved table)."""
+    chunks = chunks if chunks is not None else load_chunks()
     needed = set(names)
     if needed & {"hybrid", "rerank"}:
         needed |= {"dense", "bm25"}

@@ -28,6 +28,8 @@ evaluate = "compliance_rag.evaluate:main"
 ask = "compliance_rag.answer:main"
 calibrate = "compliance_rag.calibrate:main"
 gate = "compliance_rag.gate:main"
+tune-chunks = "compliance_rag.tune_chunks:main"
+tune-prompts = "compliance_rag.tune_prompts:main"
 
 [build-system]
 requires = ["uv_build>=0.13.5,<0.14.0"]

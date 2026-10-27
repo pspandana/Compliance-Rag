@@ -32,6 +32,16 @@ def load_unanswerable(path: Path = UNANSWERABLE_PATH) -> list[dict]:
     return _load_jsonl(path)
 
 
+def tuning_split() -> tuple[list[dict], list[dict]]:
+    """All answerable questions (50 EU + 20 jurisdiction), split by alternating position.
+
+    Tune on the first half, confirm on the second, so a setting is not chosen on the same
+    questions it is then reported on.
+    """
+    questions = load_golden(GOLDEN_PATH) + load_golden(JURISDICTION_PATH)
+    return questions[0::2], questions[1::2]
+
+
 def rank_docs(chunk_doc_ids: list[str]) -> list[str]:
     return list(dict.fromkeys(chunk_doc_ids))
 

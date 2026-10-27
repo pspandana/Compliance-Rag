@@ -97,6 +97,23 @@ Known limits: confidence separates answerable from unanswerable questions well b
 does not predict correctness (AUC 0.41 on 50 questions); the golden set favours
 articles, which flatters the article filter. See `docs/GUIDE.md` for details.
 
+## Tuning
+
+Chunk size and the generator prompt were tuned on 35 of the 70 answerable questions and
+confirmed on the other 35, with decision rules fixed in advance and a noise measurement
+(the same prompt run twice).
+
+```powershell
+uv run tune-chunks                                              # search only, no API calls
+uv run python -m compliance_rag.tune_prompts v0 v0 v1 v2        # ~20 min per variant, calls the API
+```
+
+Outcome: **no change adopted.** 800-character chunks scored slightly better than 1200
+(+0.017 tune MRR, +0.015 holdout) but below the 0.02 bar; chunks above ~2,000 characters
+clearly hurt. The "complete" prompt variants did not beat run-to-run noise: identical runs
+flipped the verdict on 7 of 70 questions. Seventy questions cannot detect small gains.
+Details in `docs/GUIDE.md` (Phase 8).
+
 ## Tests
 
 ```powershell
@@ -112,4 +129,5 @@ uv run pytest
 5. Grader, abstain / human review, calibrated confidence, LLM judge, regression gate, GitHub Actions workflow (written, not yet run on GitHub)
 6. Second version of the law (UK GDPR): jurisdiction / effective date / version metadata, metadata-filtered and jurisdiction-aware retrieval and answers
 7. PySpark ingestion (clean, tag, dedupe, link identical text across jurisdictions, chunk), output checked against the plain-Python pipeline
-8. Not started: chunk-size and prompt tuning, Docker, Terraform, Azure AI Foundry, Confluence; no corpus beyond two related documents
+8. Chunk-size and prompt tuning with a holdout half and a noise measurement (no change adopted)
+9. Not started: Docker, Terraform, Azure AI Foundry, Confluence; GitHub run of CI; no corpus beyond two related documents
