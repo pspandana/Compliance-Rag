@@ -230,6 +230,110 @@ for the design and the evaluation method, not a production system.
 
 ---
 
+## Part 10: Your resume, line by line
+
+First, decide which story is true for you, because it changes every answer below:
+
+- **Story A: the resume describes real work at a company.** Then the 200 documents, the
+  40% and the 20%→60% come from that work. Answer from that experience. This repo is your
+  personal rebuild of the same ideas, on public law, so you can show the design and the
+  evaluation method. Say so openly: "The work project was confidential, so I rebuilt the
+  approach on the GDPR."
+- **Story B: the resume describes only this project.** Then use the measured numbers below.
+  The 200 documents, 40% and 20%→60% are not backed by anything here and must go.
+
+Never mix the two. Do not give this repo's numbers as the work project's, or the reverse.
+
+### Bullet 1: "enterprise POC ... 200 regulated documents ... conflicting versions and unanswerable questions"
+- **Backed by this repo:** the problem. Two versions of one law (EU and UK) that conflict in
+  places, and 12 unanswerable questions.
+- **Not backed:** the 200 documents. This repo has 2.
+- **Likely question:** "What did the basic upload-and-chat approach get wrong?"
+- **Answer:** "It answers from whatever chunks it gets, with no check on the source or the
+  version. With two versions of one law it mixes them, and with a question the documents
+  can't answer it still produces something. I fixed both: jurisdiction scoping, and a
+  verifier plus refusal. On 12 unanswerable questions, none was answered automatically."
+
+### Bullet 2: "Grader, Generator, Verifier ... abstains or escalates to a human"
+- **Fully backed.** See Q3, Q4, Q16.
+- **Likely question:** "What does 'escalate to a human' actually do?"
+- **Answer:** "The answer is routed to a `review` queue with its evidence. Two of 12
+  unanswerable questions went there. It isn't a full review tool. It's the routing decision
+  and the evidence a reviewer would see."
+
+### Bullet 3: "Bayesian confidence ... auto-answer versus human-review threshold"
+- **Fully backed.** See Q13–Q15.
+- **Likely question:** "How did you choose 0.80 and 0.55?"
+- **Answer:** "I picked them to be cautious and checked them on the 82 questions. They kept
+  unanswerable questions from being auto-answered. I didn't tune them heavily, and the score
+  doesn't predict correctness (AUC 0.41), so I'd call it a refusal control, not a quality
+  predictor."
+
+### Bullet 4: "PySpark ... clean, deduplicate, chunk, tag ... reduced irrelevant context by 40%"
+- **Backed:** the pipeline, the metadata (type, effective date, version, jurisdiction) and
+  metadata-filtered retrieval.
+- **Not backed:** the "40%". It was never measured here.
+- **Honest way to talk about this repo:** "Filtering to articles and to the right
+  jurisdiction raised first-answer-correct on the 50 EU questions from 0.61 (hybrid, no
+  rerank) to 0.81 with the reranker. I didn't measure 'irrelevant context' as a percentage."
+  Use the 40% only under Story A, with its own definition ready: "irrelevant context =
+  chunks the grader rejects, per question."
+- **Likely question:** "How did you measure 40%?" Have that answer ready, or drop it.
+
+### Bullet 5: "50-question golden set ... recall@k and MRR ... groundedness, faithfulness, correctness ... 20% to approximately 60%"
+- **Backed:** the 50-question set, Recall@k, MRR, supported-claims (groundedness/faithfulness)
+  and judged correctness. Tuning of chunking, hybrid search and reranking.
+- **This repo's own improvement:** R@1 went 0.36 (dense only) → 0.81 (hybrid + rerank) on
+  the 50 EU questions; MRR 0.545 → 0.878.
+- **Not backed:** "20% to 60%". If it's from real work, own it as that. If not, use 0.36 → 0.81.
+- **Likely question:** "Define groundedness vs faithfulness vs correctness."
+- **Answer:** "Groundedness: is each claim supported by the retrieved text? Faithfulness: does
+  the answer say only what the sources say, with nothing added? Correctness: does it match
+  the gold answer? In this repo, the verifier covers the first two (97% of claims
+  supported) and the judge covers correctness (76% on EU, 90% on jurisdiction)."
+- **Likely question:** "Your tuning improved things?" **Answer:** "Search improved a lot.
+  The final chunk-size and prompt tuning did not beat the noise, so I changed nothing and
+  I can show why."
+
+### Bullet 6: "Azure AI Foundry evaluations ... LLM-as-judge ... human spot-checks ... regression gate"
+- **Backed:** LLM-as-judge and the regression gate.
+- **Not backed here:** Foundry (the judge is OpenAI `gpt-5.4`), and human spot-checks.
+- **Likely question:** "How does Foundry fit, and who did the spot-checks?"
+- **Answer under Story A:** your real Foundry setup. Under Story B: "I used an OpenAI judge
+  here. Foundry would host the same judge inside the company's cloud, and the gate works
+  the same way. I read the judge's written reasons for the failures myself, which is how I
+  found the incomplete-list and search-miss patterns, but I haven't run a formal spot-check
+  sample."
+- Do not claim "automated Foundry evaluations" for this repo.
+
+### Bullet 7: "GitHub Actions CI/CD ... containerized deployment, Terraform, Confluence"
+- **Backed:** GitHub Actions with tests, lint and the retrieval gate (passing).
+- **Not built:** containerized deployment, Terraform, Confluence.
+- **Answer under Story A:** your real experience of each, one example each.
+- **Answer under Story B:** drop "containerized deployment, Terraform, Confluence" from the
+  bullet, or say "designed" and be ready to walk through Q27–Q30.
+
+### Safer wording of the bullets for this repo (Story B)
+1. Built a Grader/Generator/Verifier RAG pipeline over the EU and UK GDPR that abstains or
+   routes to human review when evidence is weak; auto-answered 0 of 12 unanswerable questions.
+2. Built Beta-posterior confidence from retrieval relevance, grader agreement and verifier
+   support to set the auto-answer vs review threshold; showed it separates answerable from
+   unanswerable questions but not correct from incorrect ones.
+3. Built a PySpark ingestion pipeline (clean, dedupe, chunk, tag with type, jurisdiction,
+   effective date and version) and metadata-filtered retrieval.
+4. Created an 82-question golden set; raised first-answer-correct from 0.36 to 0.81 with
+   hybrid search and reranking; 97% of claims supported, 76–90% judged correct.
+5. Added an LLM-judge regression gate and GitHub Actions CI; ran holdout-based tuning with a
+   noise measurement and reported a negative result.
+
+### Five questions to practise out loud
+1. "Walk me through one question from input to answer." (Scope → search → grader →
+   generator → verifier → confidence → route. Use a real example from `uv run ask`.)
+2. "Where does your system fail?" (Q11, plus incomplete lists.)
+3. "Which numbers on your resume would you not stand behind?" (Have an honest answer.)
+4. "What would you change if you had a week?" (Q31.)
+5. "What did you learn?" (Q32.)
+
 ## Do not say
 
 - "200 documents", "40% less irrelevant context", "20% to 60%": not measured here.
